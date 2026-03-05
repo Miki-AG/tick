@@ -67,7 +67,7 @@ function runScenario(scenarioName) {
   }
 
   let command = readCommand(commandPath);
-  const tickPath = path.join(__dirname, "..", "tick");
+  const tickPath = path.join(__dirname, "..", "..", "src", "tick", "tick");
   command = command.replace(/^tick\b/, `"${tickPath}"`);
 
   const result = spawnSync(command, {

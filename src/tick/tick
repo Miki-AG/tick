@@ -2,6 +2,7 @@
 
 set -euo pipefail
 SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="${SCRIPT_DIR:h:h}"
 
 print_help() {
   cat <<'HELP'
@@ -23,7 +24,7 @@ tick update <id> [options]
   Update a ticket's front matter, labels, or body sections.
 
 tick test [scenario]
-  Run test scenarios under ./src/tick/test. If no scenario is given, runs all.
+  Run test scenarios under ./test/tick. If no scenario is given, runs all.
 HELP
 }
 
@@ -49,7 +50,7 @@ case "$cmd" in
     node "$SCRIPT_DIR/update.js" "$@"
     ;;
   test)
-    node "$SCRIPT_DIR/test/run.js" "$@"
+    node "$PROJECT_ROOT/test/tick/run.js" "$@"
     ;;
   "")
     print_help >&2

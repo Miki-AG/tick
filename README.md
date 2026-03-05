@@ -28,7 +28,7 @@ npm test
 Equivalent direct command:
 
 ```sh
-node src/tick/test/run.js
+node test/tick/run.js
 ```
 
 ## Optional global usage
@@ -45,5 +45,5 @@ alias tick="/Users/miguelarmengol/_dev/ocecat/tick/tick"
 - `src/tick/tick`: command dispatcher
 - `src/tick/*.js`: command implementation
 - `src/tick/templates/`: issue file templates
-- `src/tick/test/`: tool test scenarios and runner
+- `test/tick/`: tool test scenarios and runner
 - `_ISSUES/`: local ticket data for this repo

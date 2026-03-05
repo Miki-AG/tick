@@ -3,7 +3,7 @@
     "level": "info",
     "message": ""
   },
-  "0002": {
-    "updates": "Completed: tick sources moved to src/tick with root wrapper and passing tests."
+  "0003": {
+    "updates": "Completed: tests moved to test/tick and both ./tick test and npm test pass."
   }
 }
