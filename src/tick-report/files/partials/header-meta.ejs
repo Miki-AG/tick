@@ -1,0 +1,11 @@
+<div class="meta">
+  <% if (metaType === "report") { %>
+    <span>mode: single global instance</span>
+    <span>project: <span id="active-project-path" class="mono">-</span></span>
+  <% } else if (metaType === "ticket") { %>
+    <span>project: <span id="project-id" class="mono"><%= project.id %></span></span>
+    <span>path: <span id="root-dir" class="mono"><%= project.path %></span></span>
+  <% } %>
+  <span>refresh: <%= intervalMs %>ms</span>
+  <span id="last-refresh">last refresh: -</span>
+</div>

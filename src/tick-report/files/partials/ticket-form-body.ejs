@@ -1,0 +1,82 @@
+<div class="ticket-shell">
+  <div class="ticket-head">
+    <div class="ticket-id mono" id="ticket-id">-</div>
+    <input
+      id="ticket-title-input"
+      class="ticket-title-input"
+      type="text"
+      placeholder="Ticket title"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="ticket-layout">
+    <div class="ticket-main">
+      <div class="ticket-body-wrap">
+        <div class="ticket-body-label">Body</div>
+        <textarea
+          id="ticket-body-input"
+          class="ticket-body-input mono"
+          placeholder="Ticket body"
+          spellcheck="false"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="ticket-side">
+      <div class="ticket-field">
+        <div class="ticket-field-label">Status</div>
+        <select id="ticket-status-input" class="ticket-input">
+          <option value="open">open</option>
+          <option value="doing">doing</option>
+          <option value="blocked">blocked</option>
+          <option value="done">done</option>
+          <option value="wontfix">wontfix</option>
+        </select>
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">Priority</div>
+        <select id="ticket-priority-input" class="ticket-input">
+          <option value="p0">p0</option>
+          <option value="p1">p1</option>
+          <option value="p2">p2</option>
+          <option value="p3">p3</option>
+        </select>
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">Owner</div>
+        <input id="ticket-owner-input" class="ticket-input" type="text" autocomplete="off" />
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">Updated</div>
+        <div class="ticket-field-value" id="ticket-updated">-</div>
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">Labels</div>
+        <input
+          id="ticket-labels-input"
+          class="ticket-input"
+          type="text"
+          autocomplete="off"
+          placeholder="comma,separated,labels"
+        />
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">Updates</div>
+        <textarea
+          id="ticket-updates-input"
+          class="ticket-input ticket-updates-input"
+          placeholder="LLM/user status updates"
+        ></textarea>
+      </div>
+      <div class="ticket-field">
+        <div class="ticket-field-label">File</div>
+        <div class="ticket-field-value mono" id="ticket-file">-</div>
+      </div>
+      <div class="ticket-save-row">
+        <button id="ticket-save-btn" class="ticket-save-btn" type="button">Save</button>
+        <div id="ticket-save-note" class="ticket-save-note">No changes</div>
+      </div>
+    </div>
+  </div>
+</div>

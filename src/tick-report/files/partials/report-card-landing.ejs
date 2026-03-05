@@ -1,21 +1,4 @@
-<div class="card">
-  <div class="projects-panel">
-    <div class="projects-panel-title">Attached Projects</div>
-    <div class="projects-empty" id="projects-empty" style="display:none;">No attached projects.</div>
-    <div class="projects-wrap">
-      <table class="projects-table">
-        <thead>
-          <tr>
-            <th>project</th>
-            <th>path</th>
-            <th>status</th>
-            <th>actions</th>
-          </tr>
-        </thead>
-        <tbody id="project-rows"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="status-line" id="tick-status">loading...</div>
-</div>
+<%- include("card-shell.ejs", {
+  beforeTemplate: "report-card-landing-body.ejs",
+  statusId: "tick-status",
+}) %>

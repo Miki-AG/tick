@@ -1,9 +1,4 @@
 <div class="header">
   <%- include("breadcrumb.ejs", { project: selectedProject || null, ticketId: null }) %>
-  <div class="meta">
-    <span>mode: single global instance</span>
-    <span>project: <span id="active-project-path" class="mono">-</span></span>
-    <span>refresh: <%= intervalMs %>ms</span>
-    <span id="last-refresh">last refresh: -</span>
-  </div>
+  <%- include("header-meta.ejs", { metaType: "report" }) %>
 </div>

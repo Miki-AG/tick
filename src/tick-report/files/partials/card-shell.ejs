@@ -1,0 +1,19 @@
+<%
+  const resolvedCardClass = typeof cardClass === "undefined" ? "" : cardClass;
+  const resolvedBeforeTemplate = typeof beforeTemplate === "undefined" ? "" : beforeTemplate;
+  const resolvedBeforeLocals = typeof beforeLocals === "undefined" ? {} : beforeLocals;
+  const resolvedStatusId = typeof statusId === "undefined" ? "tick-status" : statusId;
+  const resolvedAfterTemplate = typeof afterTemplate === "undefined" ? "" : afterTemplate;
+  const resolvedAfterLocals = typeof afterLocals === "undefined" ? {} : afterLocals;
+%>
+<div class="card <%= resolvedCardClass %>">
+  <% if (resolvedBeforeTemplate) { %>
+    <%- include(resolvedBeforeTemplate, resolvedBeforeLocals) %>
+  <% } %>
+
+  <div class="status-line" id="<%= resolvedStatusId %>">loading...</div>
+
+  <% if (resolvedAfterTemplate) { %>
+    <%- include(resolvedAfterTemplate, resolvedAfterLocals) %>
+  <% } %>
+</div>

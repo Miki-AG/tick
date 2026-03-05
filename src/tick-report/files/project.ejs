@@ -1,20 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tick Report Project</title>
-  <link rel="stylesheet" href="/assets/tick-report.css" />
-</head>
-<body>
-  <div class="wrap">
-    <%- include("partials/header.ejs") %>
-    <%- include("partials/report-card-project.ejs") %>
-  </div>
-
-  <script>
-    window.__TICK_REPORT_CONFIG = <%- configJson %>;
-  </script>
-  <script src="/assets/tick-report.js"></script>
-</body>
-</html>
+<%- include("partials/page-shell.ejs", {
+  pageTitle: "Tick Report Project",
+  contentTemplate: "page-report.ejs",
+  contentLocals: { reportCardTemplate: "report-card-project.ejs" },
+  configGlobalName: "__TICK_REPORT_CONFIG",
+  configJson,
+  scriptPath: "/assets/tick-report.js",
+}) %>

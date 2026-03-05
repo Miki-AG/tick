@@ -1,0 +1,6 @@
+<div class="header">
+  <%- include("breadcrumb.ejs", { project, ticketId }) %>
+  <%- include("header-meta.ejs", { metaType: "ticket", project }) %>
+</div>
+
+<%- include("ticket-form.ejs") %>

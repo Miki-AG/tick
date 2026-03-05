@@ -1,0 +1,31 @@
+<div class="toolbar">
+  <div class="toolbar-left">
+    <span class="toolbar-label">Ticket filters</span>
+  </div>
+
+  <div class="toolbar-right">
+    <span class="toolbar-label">Show</span>
+    <div class="filters" id="status-filters"></div>
+    <div class="toolbar-label-filter">
+      <label class="cutoff-label" for="label-filter-input">Label</label>
+      <input
+        id="label-filter-input"
+        class="label-filter-input"
+        type="text"
+        placeholder="e.g. BUG"
+        autocomplete="off"
+      />
+    </div>
+    <div class="toolbar-cutoff">
+      <label class="cutoff-label" for="min-ticket-id">Min ticket</label>
+      <input
+        id="min-ticket-id"
+        class="cutoff-input"
+        type="number"
+        min="0"
+        step="1"
+        placeholder="e.g. 42"
+      />
+    </div>
+  </div>
+</div>

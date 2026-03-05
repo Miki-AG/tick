@@ -1,29 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tick Report Ticket <%= ticketId %></title>
-  <link rel="stylesheet" href="/assets/tick-report.css" />
-</head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <%- include("partials/breadcrumb.ejs", { project, ticketId }) %>
-      <div class="meta">
-        <span>project: <span id="project-id" class="mono"><%= project.id %></span></span>
-        <span>path: <span id="root-dir" class="mono"><%= project.path %></span></span>
-        <span>refresh: <%= intervalMs %>ms</span>
-        <span id="last-refresh">last refresh: -</span>
-      </div>
-    </div>
-
-    <%- include("partials/ticket-form.ejs") %>
-  </div>
-
-  <script>
-    window.__TICK_TICKET_CONFIG = <%- configJson %>;
-  </script>
-  <script src="/assets/tick-ticket.js"></script>
-</body>
-</html>
+<%- include("partials/page-shell.ejs", {
+  pageTitle: `Tick Report Ticket ${ticketId}`,
+  contentTemplate: "page-ticket.ejs",
+  contentLocals: { project, ticketId },
+  configGlobalName: "__TICK_TICKET_CONFIG",
+  configJson,
+  scriptPath: "/assets/tick-ticket.js",
+}) %>
