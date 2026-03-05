@@ -17,7 +17,7 @@ It provides:
 
 ## Local usage
 
-Run commands from this repository root:
+Run commands from the repository root:
 
 ```sh
 ./tick -h
