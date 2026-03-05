@@ -33,3 +33,4 @@ Required behavior:
 - 2026-03-05: implemented route-mode rendering and removed `VIEW` action from landing page.
 - 2026-03-05: added assertions in `test/tick-report/run.js` for both route HTML outputs.
 - 2026-03-05: validated with `npm run test:tick-report` and `npm test`.
+- 2026-03-05: refactored from shared index template to explicit `landing.ejs` and `project.ejs` templates.

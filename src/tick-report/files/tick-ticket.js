@@ -108,7 +108,7 @@ function applyTicketToForm(ticket, preserveDirty = false) {
   refs.ticketId.textContent = ticket.id || ticket.fileId || "-";
   refs.ticketUpdated.textContent = ticket.updated || "-";
   refs.ticketFile.textContent = `_ISSUES/${ticket.fileName || ""}`;
-  refs.pageTitle.textContent = `${PROJECT_ID} / ticket ${ticket.id || ticket.fileId || RAW_TICKET_ID}`;
+  refs.pageTitle.textContent = `ticket ${ticket.id || ticket.fileId || RAW_TICKET_ID}`;
 
   refs.titleInput.value = ticket.title || "";
   refs.statusInput.value = STATUS_OPTIONS.has(status) ? status : "open";

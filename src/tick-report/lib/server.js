@@ -35,14 +35,22 @@ function decodeSegment(value) {
 function buildLandingHtml(intervalMs) {
   return renderTemplate(LANDING_TEMPLATE_PATH, {
     intervalMs,
+    mode: "landing",
+    selectedProject: null,
     configJson: JSON.stringify({ pollMs: intervalMs, mode: "landing", selectedProjectId: null }),
   });
 }
 
-function buildProjectHtml(intervalMs, selectedProjectId) {
+function buildProjectHtml(intervalMs, selectedProject) {
   return renderTemplate(PROJECT_TEMPLATE_PATH, {
     intervalMs,
-    configJson: JSON.stringify({ pollMs: intervalMs, mode: "project", selectedProjectId }),
+    mode: "project",
+    selectedProject,
+    configJson: JSON.stringify({
+      pollMs: intervalMs,
+      mode: "project",
+      selectedProjectId: selectedProject.id,
+    }),
   });
 }
 
@@ -502,7 +510,7 @@ function createServer(port, intervalMs, host = "127.0.0.1") {
         res.end("Project not found.\n");
         return;
       }
-      res.end(buildProjectHtml(intervalMs, projectId));
+      res.end(buildProjectHtml(intervalMs, selectedProject));
       return;
     }
 

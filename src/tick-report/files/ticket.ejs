@@ -10,9 +10,15 @@
   <div class="wrap">
     <div class="header">
       <h1>
-        <a class="ticket-back-link" href="/project/<%= encodeURIComponent(project.id) %>">tick-report</a>
+        <a class="ticket-back-link" href="/">tick-report</a>
         <span class="ticket-page-sep">/</span>
-        <span id="ticket-page-title"><%= project.name || project.id %> / ticket <%= ticketId %></span>
+        <a
+          class="ticket-back-link ticket-project-link mono"
+          id="ticket-project-link"
+          href="/project/<%= encodeURIComponent(project.id) %>"
+        ><%= project.name || project.id %></a>
+        <span class="ticket-page-sep">/</span>
+        <span id="ticket-page-title">ticket <%= ticketId %></span>
       </h1>
       <div class="meta">
         <span>project: <span id="project-id" class="mono"><%= project.id %></span></span>

@@ -3,12 +3,17 @@
 const config = window.__TICK_REPORT_CONFIG || {};
 const POLL_MS = Number.isFinite(config.pollMs) ? config.pollMs : 5000;
 const MODE = config.mode === "project" ? "project" : "landing";
+const FILTER_STATUSES = ["open", "doing", "blocked", "done", "wontfix", "unknown"];
 
 const state = {
   projects: [],
   selectedProjectId: String(config.selectedProjectId || "").trim() || null,
   tickets: [],
 };
+const statusFilters = Object.fromEntries(FILTER_STATUSES.map((status) => [status, true]));
+const PREFS_KEY = `tick-report:prefs:${MODE}:${state.selectedProjectId || "default"}`;
+let minTicketId = null;
+let labelFilter = "";
 
 function setStatus(message) {
   const el = document.getElementById("tick-status");
@@ -23,6 +28,30 @@ function setLastRefresh() {
 function setActiveProjectPath(pathText) {
   const el = document.getElementById("active-project-path");
   if (el) el.textContent = pathText || "-";
+}
+
+function normalizeStatus(value) {
+  const normalized = String(value || "").toLowerCase();
+  return FILTER_STATUSES.includes(normalized) ? normalized : "unknown";
+}
+
+function toTicketNumber(value) {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeLabel(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function ticketHasLabel(ticket, labelNeedle) {
+  const needle = normalizeLabel(labelNeedle);
+  if (!needle) return true;
+  const labels = String(ticket.labels || "")
+    .split(",")
+    .map((part) => normalizeLabel(part))
+    .filter((part) => part.length > 0);
+  return labels.includes(needle);
 }
 
 function formatUpdatedParts(ticket) {
@@ -57,6 +86,46 @@ function chooseSelectedProject(projects) {
   return projects[0].id;
 }
 
+function loadPreferences() {
+  try {
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return;
+
+    if (parsed.statusFilters && typeof parsed.statusFilters === "object") {
+      for (const status of FILTER_STATUSES) {
+        if (typeof parsed.statusFilters[status] === "boolean") {
+          statusFilters[status] = parsed.statusFilters[status];
+        }
+      }
+    }
+    if (Number.isFinite(parsed.minTicketId) && parsed.minTicketId >= 0) {
+      minTicketId = parsed.minTicketId;
+    }
+    if (typeof parsed.labelFilter === "string") {
+      labelFilter = parsed.labelFilter;
+    }
+  } catch (err) {
+    // ignore invalid local state
+  }
+}
+
+function savePreferences() {
+  try {
+    window.localStorage.setItem(
+      PREFS_KEY,
+      JSON.stringify({
+        statusFilters,
+        minTicketId,
+        labelFilter,
+      })
+    );
+  } catch (err) {
+    // ignore storage errors
+  }
+}
+
 async function loadProjects() {
   const { res, data } = await fetchJson("/api/projects");
   if (!res.ok) {
@@ -65,6 +134,54 @@ async function loadProjects() {
 
   state.projects = Array.isArray(data.projects) ? data.projects : [];
   state.selectedProjectId = chooseSelectedProject(state.projects);
+}
+
+function renderFilterButtons() {
+  const wrap = document.getElementById("status-filters");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+
+  for (const status of FILTER_STATUSES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `filter-btn status-${status} ${statusFilters[status] ? "on" : "off"}`;
+    btn.textContent = status;
+    btn.addEventListener("click", () => {
+      statusFilters[status] = !statusFilters[status];
+      savePreferences();
+      renderFilterButtons();
+      renderRows();
+    });
+    wrap.appendChild(btn);
+  }
+}
+
+function setupMinTicketFilter() {
+  const input = document.getElementById("min-ticket-id");
+  if (!input) return;
+  input.value = minTicketId === null ? "" : String(minTicketId);
+  input.addEventListener("input", () => {
+    const raw = String(input.value || "").trim();
+    if (!raw) {
+      minTicketId = null;
+    } else {
+      const parsed = Number.parseInt(raw, 10);
+      minTicketId = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    }
+    savePreferences();
+    renderRows();
+  });
+}
+
+function setupLabelFilter() {
+  const input = document.getElementById("label-filter-input");
+  if (!input) return;
+  input.value = labelFilter;
+  input.addEventListener("input", () => {
+    labelFilter = String(input.value || "").trim();
+    savePreferences();
+    renderRows();
+  });
 }
 
 function renderProjectRows() {
@@ -158,18 +275,28 @@ function renderRows() {
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (!state.tickets.length) {
+  const visibleTickets = (state.tickets || []).filter((ticket) => {
+    if (!statusFilters[normalizeStatus(ticket.status)]) return false;
+    if (!ticketHasLabel(ticket, labelFilter)) return false;
+    if (minTicketId === null) return true;
+    const idNum = toTicketNumber(ticket.id || ticket.fileId);
+    return idNum !== null && idNum >= minTicketId;
+  });
+
+  if (!visibleTickets.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 8;
     td.className = "empty";
-    td.textContent = "No tickets found in selected project.";
+    td.textContent = state.tickets.length
+      ? "No tickets match current filters."
+      : "No tickets found in selected project.";
     tr.appendChild(td);
     tbody.appendChild(tr);
-    return;
+    return 0;
   }
 
-  for (const ticket of state.tickets) {
+  for (const ticket of visibleTickets) {
     const tr = document.createElement("tr");
 
     const idTd = document.createElement("td");
@@ -221,11 +348,13 @@ function renderRows() {
 
     const updatesTd = document.createElement("td");
     updatesTd.className = "updates-cell";
-    updatesTd.textContent = String(ticket.updates || "");
+    updatesTd.textContent = String(ticket.updates || "").trim();
     tr.appendChild(updatesTd);
 
     tbody.appendChild(tr);
   }
+
+  return visibleTickets.length;
 }
 
 async function loadProjectReport() {
@@ -249,11 +378,11 @@ async function loadProjectReport() {
   if (data.project && data.project.path) {
     setActiveProjectPath(data.project.path);
   }
-  renderRows();
+  const visibleCount = renderRows();
 
   const popupMessage = data.popup && data.popup.message ? ` | popup: ${data.popup.message}` : "";
   const projectLabel = data.project && data.project.path ? data.project.path : state.selectedProjectId;
-  setStatus(`Project: ${projectLabel} | tickets: ${state.tickets.length}${popupMessage}`);
+  setStatus(`Project: ${projectLabel} | tickets: ${visibleCount}/${state.tickets.length}${popupMessage}`);
   setLastRefresh();
 }
 
@@ -270,6 +399,13 @@ async function refreshProject() {
 }
 
 async function init() {
+  if (MODE === "project") {
+    loadPreferences();
+    renderFilterButtons();
+    setupMinTicketFilter();
+    setupLabelFilter();
+  }
+
   try {
     if (MODE === "landing") {
       await refreshLanding();

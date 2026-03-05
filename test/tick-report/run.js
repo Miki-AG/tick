@@ -208,8 +208,12 @@ async function runScenarios() {
 
     const landingHtml = await fetchText(`${baseUrl}/`);
     const projectHtml = await fetchText(`${baseUrl}/project/${encodeURIComponent(projectA.id)}`);
+    const ticketHtml = await fetchText(
+      `${baseUrl}/project/${encodeURIComponent(projectA.id)}/ticket/0001`
+    );
     assert(landingHtml.res.ok, "Landing page must load.");
     assert(projectHtml.res.ok, "Project page must load.");
+    assert(ticketHtml.res.ok, "Ticket page must load.");
     assert(
       landingHtml.text.includes("id=\"project-rows\""),
       "Landing page must show project list."
@@ -223,12 +227,40 @@ async function runScenarios() {
       "Landing page must not show VIEW action."
     );
     assert(
+      !landingHtml.text.includes("id=\"status-filters\""),
+      "Landing page must not show ticket filter toolbar."
+    );
+    assert(
       !projectHtml.text.includes("id=\"project-rows\""),
       "Project page must not show project list."
     );
     assert(
       projectHtml.text.includes("id=\"rows\""),
       "Project page must show ticket list."
+    );
+    assert(
+      projectHtml.text.includes("id=\"status-filters\""),
+      "Project page must show status filter toggles."
+    );
+    assert(
+      projectHtml.text.includes("id=\"min-ticket-id\""),
+      "Project page must show minimum ticket filter input."
+    );
+    assert(
+      ticketHtml.text.includes("href=\"/\">tick-report</a>"),
+      "Ticket page breadcrumb must link tick-report to landing page."
+    );
+    assert(
+      ticketHtml.text.includes(`href=\"/project/${encodeURIComponent(projectA.id)}\"`),
+      "Ticket page breadcrumb must link project id to the project page."
+    );
+    assert(
+      ticketHtml.text.includes(">repo-a<"),
+      "Ticket page breadcrumb project segment should show project folder name."
+    );
+    assert(
+      ticketHtml.text.includes(">ticket 0001<"),
+      "Ticket page breadcrumb must render ticket segment separately."
     );
 
     const updateRes = await fetchJson(
