@@ -16,7 +16,8 @@ const {
 } = require("./global-state");
 
 const FILES_DIR = path.join(__dirname, "..", "files");
-const INDEX_TEMPLATE_PATH = path.join(FILES_DIR, "index.ejs");
+const LANDING_TEMPLATE_PATH = path.join(FILES_DIR, "landing.ejs");
+const PROJECT_TEMPLATE_PATH = path.join(FILES_DIR, "project.ejs");
 const TICKET_TEMPLATE_PATH = path.join(FILES_DIR, "ticket.ejs");
 const CSS_PATH = path.join(FILES_DIR, "tick-report.css");
 const JS_PATH = path.join(FILES_DIR, "tick-report.js");
@@ -31,11 +32,17 @@ function decodeSegment(value) {
   }
 }
 
-function buildIndexHtml(intervalMs, mode, selectedProjectId) {
-  return renderTemplate(INDEX_TEMPLATE_PATH, {
+function buildLandingHtml(intervalMs) {
+  return renderTemplate(LANDING_TEMPLATE_PATH, {
     intervalMs,
-    mode,
-    configJson: JSON.stringify({ pollMs: intervalMs, mode, selectedProjectId }),
+    configJson: JSON.stringify({ pollMs: intervalMs, mode: "landing", selectedProjectId: null }),
+  });
+}
+
+function buildProjectHtml(intervalMs, selectedProjectId) {
+  return renderTemplate(PROJECT_TEMPLATE_PATH, {
+    intervalMs,
+    configJson: JSON.stringify({ pollMs: intervalMs, mode: "project", selectedProjectId }),
   });
 }
 
@@ -480,7 +487,7 @@ function createServer(port, intervalMs, host = "127.0.0.1") {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store, no-cache, must-revalidate",
       });
-      res.end(buildIndexHtml(intervalMs, "landing", null));
+      res.end(buildLandingHtml(intervalMs));
       return;
     }
 
@@ -495,7 +502,7 @@ function createServer(port, intervalMs, host = "127.0.0.1") {
         res.end("Project not found.\n");
         return;
       }
-      res.end(buildIndexHtml(intervalMs, "project", projectId));
+      res.end(buildProjectHtml(intervalMs, projectId));
       return;
     }
 
