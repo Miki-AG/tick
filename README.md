@@ -52,6 +52,24 @@ Behavior summary:
   - default host is your Tailscale IP when available,
   - any device on your tailnet can open the report URLs and see live updates.
 
+### Monitor from any screen on your network
+
+Once `tick-report` is running, you can use any screen connected to your tailnet to monitor projects in real time: laptops, tablets, external monitors, TVs with a browser, and phones.
+
+1. Start `tick-report` from any attached project:
+   ```sh
+   ./tick-report start --port 4174
+   ```
+2. Copy the URL from command output (for example `http://100.x.y.z:4174`).
+3. Open that URL on any device in your Tailscale network:
+   - laptops
+   - tablets
+   - phones
+   - wall displays/monitors with a browser
+4. Use `/` for the project list and `/project/:projectId` for a project-specific live view.
+
+Because updates are file-based and polled continuously, every open screen stays in sync as agents edit tickets.
+
 ## Tests
 
 ```sh
