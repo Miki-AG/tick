@@ -1,0 +1,19 @@
+<%
+  const hasProject = !!(project && project.id);
+  const projectLinkId = ticketId ? "ticket-project-link" : "header-project-link";
+%>
+<h1>
+  <a class="ticket-back-link" href="/">tick-report</a>
+  <% if (hasProject) { %>
+    <span class="ticket-page-sep">/</span>
+    <a
+      class="ticket-back-link ticket-project-link mono"
+      id="<%= projectLinkId %>"
+      href="/project/<%= encodeURIComponent(project.id) %>"
+    ><%= project.name || project.id %></a>
+  <% } %>
+  <% if (ticketId) { %>
+    <span class="ticket-page-sep">/</span>
+    <span id="ticket-page-title">ticket <%= ticketId %></span>
+  <% } %>
+</h1>

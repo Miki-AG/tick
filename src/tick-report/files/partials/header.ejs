@@ -1,15 +1,5 @@
 <div class="header">
-  <h1>
-    <a class="ticket-back-link" href="/">tick-report</a>
-    <% if (mode === "project" && selectedProject) { %>
-      <span class="ticket-page-sep">/</span>
-      <a
-        class="ticket-back-link ticket-project-link mono"
-        id="header-project-link"
-        href="/project/<%= encodeURIComponent(selectedProject.id) %>"
-      ><%= selectedProject.name || selectedProject.id %></a>
-    <% } %>
-  </h1>
+  <%- include("breadcrumb.ejs", { project: selectedProject || null, ticketId: null }) %>
   <div class="meta">
     <span>mode: single global instance</span>
     <span>project: <span id="active-project-path" class="mono">-</span></span>
