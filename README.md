@@ -1,6 +1,8 @@
 # tick
 
-`tick` is a text-based ticketing system designed for AI-agent workflows.
+Text-based ticketing for AI agents, with live project monitoring from any screen on your network.
+
+Use `tick` to keep all work state in markdown tickets, and `tick-report` to watch updates in real time from laptops, tablets, phones, and shared monitors on your tailnet.
 
 It provides:
 
