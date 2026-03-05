@@ -66,20 +66,6 @@ Once `tick-report` is running, you can use any screen connected to your tailnet 
 
 Because updates are file-based and polled continuously, every open screen stays in sync as agents edit tickets.
 
-## Tests
-
-```sh
-npm test
-npm run test:tick-report
-```
-
-Equivalent direct command:
-
-```sh
-node test/tick/run.js
-node test/tick-report/run.js
-```
-
 ## Optional global usage
 
 If you want to call `tick` globally, add this repo to your `PATH` or set an alias:
@@ -88,15 +74,3 @@ If you want to call `tick` globally, add this repo to your `PATH` or set an alia
 alias tick="/Users/<user>/_dev/ocecat/tick/tick"
 alias tick-report="/Users/<user>/_dev/ocecat/tick/tick-report"
 ```
-
-## Repository layout
-
-- `tick`: zsh entrypoint
-- `src/tick/tick`: command dispatcher
-- `src/tick/*.js`: command implementation
-- `src/tick/templates/`: issue file templates
-- `test/tick/`: tool test scenarios and runner
-- `tick-report`: root wrapper entrypoint
-- `src/tick-report/`: `tick-report` implementation and web assets
-- `test/tick-report/`: `tick-report` smoke tests
-- `_ISSUES/`: local ticket data for this repo
