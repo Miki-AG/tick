@@ -1,6 +1,6 @@
 # tick
 
-Local file-based issue tracker that stores tickets in `./_ISSUES`.
+Local CLI tools for issue tracking and local status reporting.
 
 ## Requirements
 
@@ -19,16 +19,29 @@ Run commands from this repository root:
 ./tick update 0001 --status doing --log "Started implementation"
 ```
 
+## tick-report usage
+
+Run report commands from any project root that contains `./_ISSUES`:
+
+```sh
+./tick-report -h
+./tick-report start --host 127.0.0.1 --port 4174
+./tick-report status
+./tick-report stop
+```
+
 ## Tests
 
 ```sh
 npm test
+npm run test:tick-report
 ```
 
 Equivalent direct command:
 
 ```sh
 node test/tick/run.js
+node test/tick-report/run.js
 ```
 
 ## Optional global usage
@@ -37,6 +50,7 @@ If you want to call `tick` globally, add this repo to your `PATH` or set an alia
 
 ```sh
 alias tick="/Users/miguelarmengol/_dev/ocecat/tick/tick"
+alias tick-report="/Users/miguelarmengol/_dev/ocecat/tick/tick-report"
 ```
 
 ## Repository layout
@@ -46,4 +60,7 @@ alias tick="/Users/miguelarmengol/_dev/ocecat/tick/tick"
 - `src/tick/*.js`: command implementation
 - `src/tick/templates/`: issue file templates
 - `test/tick/`: tool test scenarios and runner
+- `tick-report`: root wrapper entrypoint
+- `src/tick-report/`: `tick-report` implementation and web assets
+- `test/tick-report/`: `tick-report` smoke tests
 - `_ISSUES/`: local ticket data for this repo

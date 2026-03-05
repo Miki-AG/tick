@@ -4,7 +4,8 @@
   "private": true,
   "description": "Local file-based issue tracker.",
   "scripts": {
-    "test": "node test/tick/run.js"
+    "test": "node test/tick/run.js",
+    "test:tick-report": "node test/tick-report/run.js"
   },
   "engines": {
     "node": ">=18"
