@@ -2,7 +2,8 @@
 
 const config = window.__TICK_TICKET_CONFIG || {};
 const POLL_MS = Number.isFinite(config.pollMs) ? config.pollMs : 5000;
-const ROOT_DIR = String(config.rootDir || "");
+const PROJECT_ID = String(config.projectId || "").trim();
+const PROJECT_PATH = String(config.projectPath || "").trim();
 const RAW_TICKET_ID = String(config.ticketId || "").trim();
 
 const state = {
@@ -44,7 +45,7 @@ function normalizeTicketIdForApi(value) {
 
 function parseLabelsText(value) {
   return String(value || "")
-    .split(/[,\n]/)
+    .split(/[\n,]/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 }
@@ -97,8 +98,7 @@ function setDirty(flag) {
 
 function updateDirtyFromForm() {
   if (!state.loaded || state.saving) return;
-  const current = draftSnapshotFromForm();
-  setDirty(current !== state.baseline);
+  setDirty(draftSnapshotFromForm() !== state.baseline);
 }
 
 function applyTicketToForm(ticket, preserveDirty = false) {
@@ -108,7 +108,7 @@ function applyTicketToForm(ticket, preserveDirty = false) {
   refs.ticketId.textContent = ticket.id || ticket.fileId || "-";
   refs.ticketUpdated.textContent = ticket.updated || "-";
   refs.ticketFile.textContent = `_ISSUES/${ticket.fileName || ""}`;
-  refs.pageTitle.textContent = `ticket ${ticket.id || ticket.fileId || RAW_TICKET_ID}`;
+  refs.pageTitle.textContent = `${PROJECT_ID} / ticket ${ticket.id || ticket.fileId || RAW_TICKET_ID}`;
 
   refs.titleInput.value = ticket.title || "";
   refs.statusInput.value = STATUS_OPTIONS.has(status) ? status : "open";
@@ -124,11 +124,13 @@ function applyTicketToForm(ticket, preserveDirty = false) {
   }
 }
 
+function ticketApiPath(ticketId) {
+  return `/api/projects/${encodeURIComponent(PROJECT_ID)}/ticket/${encodeURIComponent(ticketId)}`;
+}
+
 async function fetchTicket() {
   const idForApi = normalizeTicketIdForApi(RAW_TICKET_ID);
-  const res = await fetch(`/api/ticket/${encodeURIComponent(idForApi)}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(ticketApiPath(idForApi), { cache: "no-store" });
   const data = await res.json();
   return { res, data, idForApi };
 }
@@ -136,14 +138,10 @@ async function fetchTicket() {
 async function loadTicket() {
   try {
     const { res, data, idForApi } = await fetchTicket();
-    if (refs.rootDir && data.rootDir) refs.rootDir.textContent = data.rootDir;
+    if (refs.rootDir) refs.rootDir.textContent = data.rootDir || PROJECT_PATH || "-";
 
     if (!res.ok) {
-      if (!data.tickEnabled) {
-        setStatusLine("tick is not initialized in this folder (missing ./_ISSUES).");
-      } else {
-        setStatusLine(data.error || `Unable to load ticket ${idForApi}.`);
-      }
+      setStatusLine(data.error || `Unable to load ticket ${idForApi}.`);
       setSaveNote("Load failed", "error");
       return;
     }
@@ -155,7 +153,7 @@ async function loadTicket() {
 
     applyTicketToForm(data.ticket || {});
     state.loaded = true;
-    setStatusLine("Watching ticket data from ./_ISSUES");
+    setStatusLine("Watching ticket data from selected project.");
     refs.lastRefresh.textContent = `last refresh: ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     setStatusLine(`Unable to fetch ticket: ${err.message}`);
@@ -193,7 +191,7 @@ async function saveTicket() {
   setStatusLine("Saving ticket...");
 
   try {
-    const res = await fetch(`/api/ticket/${encodeURIComponent(idForApi)}`, {
+    const res = await fetch(ticketApiPath(idForApi), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -211,7 +209,7 @@ async function saveTicket() {
     applyTicketToForm(data.ticket || {});
     state.loaded = true;
     setSaveNote("Saved", "ok");
-    setStatusLine("Saved. Watching ticket data from ./_ISSUES");
+    setStatusLine("Saved. Watching ticket data from selected project.");
     refs.lastRefresh.textContent = `last refresh: ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     setSaveNote(`Save failed: ${err.message}`, "error");
@@ -232,9 +230,10 @@ function attachEditorEvents() {
     refs.updatesInput,
     refs.bodyInput,
   ];
-  for (const el of inputs) {
-    el.addEventListener("input", updateDirtyFromForm);
-    el.addEventListener("change", updateDirtyFromForm);
+
+  for (const input of inputs) {
+    input.addEventListener("input", updateDirtyFromForm);
+    input.addEventListener("change", updateDirtyFromForm);
   }
 
   refs.saveBtn.addEventListener("click", () => {
@@ -249,9 +248,9 @@ function attachEditorEvents() {
   });
 }
 
-if (!ROOT_DIR) {
-  setStatusLine("Missing root directory context.");
-  setSaveNote("Missing root context", "error");
+if (!PROJECT_ID) {
+  setStatusLine("Missing project id.");
+  setSaveNote("Missing project id", "error");
 } else if (!RAW_TICKET_ID) {
   setStatusLine("Missing ticket id.");
   setSaveNote("Missing ticket id", "error");

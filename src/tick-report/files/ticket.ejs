@@ -10,12 +10,13 @@
   <div class="wrap">
     <div class="header">
       <h1>
-        <a class="ticket-back-link" href="/">tick-report</a>
+        <a class="ticket-back-link" href="/project/<%= encodeURIComponent(project.id) %>">tick-report</a>
         <span class="ticket-page-sep">/</span>
-        <span id="ticket-page-title">ticket <%= ticketId %></span>
+        <span id="ticket-page-title"><%= project.name || project.id %> / ticket <%= ticketId %></span>
       </h1>
       <div class="meta">
-        <span>root: <span id="root-dir" class="mono"><%= rootDir %></span></span>
+        <span>project: <span id="project-id" class="mono"><%= project.id %></span></span>
+        <span>path: <span id="root-dir" class="mono"><%= project.path %></span></span>
         <span>refresh: <%= intervalMs %>ms</span>
         <span id="last-refresh">last refresh: -</span>
       </div>

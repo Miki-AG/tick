@@ -1,9 +1,5 @@
 {
-  "popup": {
-    "level": "info",
-    "message": ""
-  },
-  "0010": {
-    "updates": "Completed: docs now explicitly cover project-scoped individual ticket updates with isolation checks."
+  "0012": {
+    "updates": "Done: `/` now shows projects only (no ticket list, no VIEW), and `/project/:id` shows tickets only."
   }
 }

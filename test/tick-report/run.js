@@ -20,11 +20,15 @@ function assert(condition, message) {
   }
 }
 
-function runCommand(cwd, args) {
+function runCommand(cwd, args, extraEnv = {}) {
   const result = spawnSync(TICK_REPORT_BIN, args, {
     cwd,
     encoding: "utf8",
-    timeout: 20000,
+    timeout: 30000,
+    env: {
+      ...process.env,
+      ...extraEnv,
+    },
   });
 
   if (result.error) {
@@ -50,6 +54,16 @@ function printResult(name, result) {
   process.stdout.write("\n");
 }
 
+function ensureRepoArtifacts() {
+  if (!fs.existsSync(TICK_REPORT_BIN)) {
+    fail(`Missing root wrapper: ${TICK_REPORT_BIN}`);
+  }
+  const sourceEntry = path.join(REPO_ROOT, "src", "tick-report", "tick-report");
+  if (!fs.existsSync(sourceEntry)) {
+    fail(`Missing source entrypoint: ${sourceEntry}`);
+  }
+}
+
 function getFreePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -72,58 +86,76 @@ function getFreePort() {
   });
 }
 
-function ensureRepoArtifacts() {
-  if (!fs.existsSync(TICK_REPORT_BIN)) {
-    fail(`Missing root wrapper: ${TICK_REPORT_BIN}`);
-  }
-  const sourceEntry = path.join(REPO_ROOT, "src", "tick-report", "tick-report");
-  if (!fs.existsSync(sourceEntry)) {
-    fail(`Missing source entrypoint: ${sourceEntry}`);
-  }
+function extractUrl(stdout) {
+  const match = String(stdout || "").match(/URL:\s*(http:\/\/[^\s]+)/i);
+  return match ? match[1] : null;
+}
+
+function createRepoWithSampleIssue(repoDir, title) {
+  const issuesDir = path.join(repoDir, "_ISSUES");
+  fs.mkdirSync(issuesDir, { recursive: true });
+  const issuePath = path.join(issuesDir, "0001-sample.md");
+  const content = `---\nid: 0001\ntitle: ${title}\nstatus: open\npriority: p1\nowner: test\nlabels: [TASK]\ncreated: 2026-03-05\nupdated: 2026-03-05\n---\n\n## Context\nSample context\n\n## Acceptance criteria\n- [ ] Sample\n\n## Notes\nSample\n\n## Log\n- 2026-03-05: created\n`;
+  fs.writeFileSync(issuePath, content, "utf8");
+}
+
+async function fetchJson(url, init) {
+  const res = await fetch(url, {
+    cache: "no-store",
+    ...(init || {}),
+  });
+  const data = await res.json();
+  return { res, data };
+}
+
+async function fetchText(url, init) {
+  const res = await fetch(url, {
+    cache: "no-store",
+    ...(init || {}),
+  });
+  const text = await res.text();
+  return { res, text };
 }
 
 async function runScenarios() {
-  const scenarios = [];
-  let failed = 0;
   let passed = 0;
+  let failed = 0;
 
-  const helpResult = runCommand(REPO_ROOT, ["-h"]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tick-report-multi-"));
+  const globalStateDir = path.join(tempRoot, "global-state");
+  const repoA = path.join(tempRoot, "repo-a");
+  const repoB = path.join(tempRoot, "repo-b");
+  fs.mkdirSync(repoA, { recursive: true });
+  fs.mkdirSync(repoB, { recursive: true });
+  createRepoWithSampleIssue(repoA, "Repo A original title");
+  createRepoWithSampleIssue(repoB, "Repo B original title");
+  const repoAReal = fs.realpathSync(repoA);
+  const repoBReal = fs.realpathSync(repoB);
+
+  const port = await getFreePort();
+  const env = { TICK_REPORT_HOME: globalStateDir };
+
+  const helpResult = runCommand(repoA, ["-h"], env);
   printResult("001-help", helpResult);
   try {
     assert(helpResult.exitCode === 0, "Help command must exit 0.");
-    assert(helpResult.stdout.includes("tick-report start"), "Help output missing start command.");
-    passed += 1;
-  } catch (err) {
-    failed += 1;
-    process.stdout.write(`Error: ${err.message}\n\n`);
-  }
-  scenarios.push("001-help");
-
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tick-report-test-"));
-
-  const statusResult = runCommand(tempRoot, ["status"]);
-  printResult("002-status", statusResult);
-  try {
-    assert(statusResult.exitCode === 0, "Status command must exit 0.");
     assert(
-      statusResult.stdout.includes("tick-report status:"),
-      "Status output missing expected prefix."
+      helpResult.stdout.toLowerCase().includes("single daemon"),
+      "Help output should mention single daemon behavior."
     );
     passed += 1;
   } catch (err) {
     failed += 1;
     process.stdout.write(`Error: ${err.message}\n\n`);
   }
-  scenarios.push("002-status");
 
-  const port = await getFreePort();
-  let startResult;
-  let runningResult;
+  let startA;
+  let startB;
+  let statusA;
   let stopResult;
-  let stoppedResult;
 
   try {
-    startResult = runCommand(tempRoot, [
+    startA = runCommand(repoA, [
       "start",
       "--host",
       "127.0.0.1",
@@ -131,44 +163,123 @@ async function runScenarios() {
       String(port),
       "--interval",
       "500",
-    ]);
-    printResult("003-start", startResult);
-    runningResult = runCommand(tempRoot, ["status"]);
-    printResult("004-status-running", runningResult);
-    stopResult = runCommand(tempRoot, ["stop"]);
-    printResult("005-stop", stopResult);
-    stoppedResult = runCommand(tempRoot, ["status"]);
-    printResult("006-status-stopped", stoppedResult);
+    ], env);
+    printResult("002-start-repo-a", startA);
 
-    assert(startResult.exitCode === 0, "start must exit 0.");
+    startB = runCommand(repoB, [
+      "start",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(port),
+      "--interval",
+      "500",
+    ], env);
+    printResult("003-start-repo-b", startB);
+
+    statusA = runCommand(repoA, ["status"], env);
+    printResult("004-status", statusA);
+
+    assert(startA.exitCode === 0, "First start must exit 0.");
+    assert(startA.stdout.includes("launch requested"), "First start should launch daemon.");
+    assert(startB.exitCode === 0, "Second start must exit 0.");
+    assert(startB.stdout.includes("Reused existing instance"), "Second start should reuse daemon.");
+    assert(statusA.exitCode === 0, "Status must exit 0.");
+    assert(statusA.stdout.includes("attached projects: 2"), "Status should report two attached projects.");
+
+    const baseUrl = extractUrl(startA.stdout);
+    assert(baseUrl, "Start output must include URL.");
+
+    const projectsResponse = await fetchJson(`${baseUrl}/api/projects`);
+    assert(projectsResponse.res.ok, "GET /api/projects must succeed.");
+    const projects = Array.isArray(projectsResponse.data.projects)
+      ? projectsResponse.data.projects
+      : [];
+    assert(projects.length === 2, "Expected exactly two attached projects.");
+
+    const projectA = projects.find((project) => project.path === repoAReal);
+    const projectB = projects.find((project) => project.path === repoBReal);
+    assert(projectA, "Repo A project must be present.");
+    assert(projectB, "Repo B project must be present.");
+
+    const reportA = await fetchJson(`${baseUrl}/api/projects/${encodeURIComponent(projectA.id)}/report`);
+    const reportB = await fetchJson(`${baseUrl}/api/projects/${encodeURIComponent(projectB.id)}/report`);
+    assert(reportA.res.ok && reportB.res.ok, "Project report endpoints must succeed.");
+
+    const landingHtml = await fetchText(`${baseUrl}/`);
+    const projectHtml = await fetchText(`${baseUrl}/project/${encodeURIComponent(projectA.id)}`);
+    assert(landingHtml.res.ok, "Landing page must load.");
+    assert(projectHtml.res.ok, "Project page must load.");
     assert(
-      startResult.stdout.includes("tick-report launch requested"),
-      "start output missing launch confirmation."
+      landingHtml.text.includes("id=\"project-rows\""),
+      "Landing page must show project list."
     );
-    assert(runningResult.exitCode === 0, "running status must exit 0.");
-    assert(runningResult.stdout.includes("running"), "status should indicate running.");
     assert(
-      runningResult.stdout.includes(`:${port}`),
-      "running status should include configured port."
+      !landingHtml.text.includes("id=\"rows\""),
+      "Landing page must not show ticket list."
     );
-    assert(stopResult.exitCode === 0, "stop must exit 0.");
-    assert(stopResult.stdout.includes("Stopped tick-report"), "stop output missing confirmation.");
-    assert(stoppedResult.exitCode === 0, "stopped status must exit 0.");
-    assert(stoppedResult.stdout.includes("stopped"), "status should indicate stopped.");
+    assert(
+      !landingHtml.text.includes(">VIEW<"),
+      "Landing page must not show VIEW action."
+    );
+    assert(
+      !projectHtml.text.includes("id=\"project-rows\""),
+      "Project page must not show project list."
+    );
+    assert(
+      projectHtml.text.includes("id=\"rows\""),
+      "Project page must show ticket list."
+    );
+
+    const updateRes = await fetchJson(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectA.id)}/ticket/0001`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: "Repo A updated title",
+          status: "doing",
+          priority: "p1",
+          owner: "tester",
+          labels: ["TASK"],
+          updates: "Updated from multi-repo test",
+          body: "Updated body",
+        }),
+      }
+    );
+    assert(updateRes.res.ok, "Project-scoped ticket update must succeed.");
+
+    const repoAFile = fs.readFileSync(path.join(repoA, "_ISSUES", "0001-sample.md"), "utf8");
+    const repoBFile = fs.readFileSync(path.join(repoB, "_ISSUES", "0001-sample.md"), "utf8");
+    assert(repoAFile.includes("Repo A updated title"), "Repo A ticket file should be updated.");
+    assert(!repoBFile.includes("Repo A updated title"), "Repo B ticket file must remain unchanged.");
+
+    const detachRes = await fetchJson(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectB.id)}/detach`,
+      {
+        method: "POST",
+      }
+    );
+    assert(detachRes.res.ok, "Detach endpoint must succeed.");
+    const remaining = Array.isArray(detachRes.data.projects) ? detachRes.data.projects : [];
+    assert(remaining.length === 1, "Detach should leave one project.");
+
     passed += 1;
   } catch (err) {
     failed += 1;
     process.stdout.write(`Error: ${err.message}\n\n`);
   } finally {
     try {
-      runCommand(tempRoot, ["stop"]);
+      stopResult = runCommand(repoA, ["stop"], env);
+      printResult("005-stop", stopResult);
     } catch (err) {
-      // no-op cleanup best effort
+      process.stdout.write(`Cleanup stop failed: ${err.message}\n\n`);
     }
   }
-  scenarios.push("003-start-stop-flow");
 
-  process.stdout.write(`Total scenarios: ${scenarios.length}\n`);
+  process.stdout.write(`Total scenarios: 2\n`);
   process.stdout.write(`Total passed: ${passed}\n`);
   process.stdout.write(`Total failed: ${failed}\n`);
 

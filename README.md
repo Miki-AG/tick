@@ -21,7 +21,7 @@ Run commands from this repository root:
 
 ## tick-report usage
 
-Run report commands from any project root that contains `./_ISSUES`:
+Run report commands from any project root. `start` attaches that project to one global `tick-report` instance:
 
 ```sh
 ./tick-report -h
@@ -29,6 +29,12 @@ Run report commands from any project root that contains `./_ISSUES`:
 ./tick-report status
 ./tick-report stop
 ```
+
+Behavior summary:
+
+- Only one `tick-report` daemon runs at a time.
+- Running `start` in another repo reuses the running daemon and attaches that repo.
+- The same daemon serves updates for all attached project UIs.
 
 ## Tests
 

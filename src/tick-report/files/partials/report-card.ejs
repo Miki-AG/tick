@@ -1,63 +1,43 @@
 <div class="card">
-  <div class="toolbar">
-    <div class="toolbar-left">
-        <div id="popup-inline" class="popup-inline">
-          <div class="level"></div>
-          <div class="message-viewport">
-            <div class="message-track">
-              <span class="message message-primary"></span>
-              <span class="message message-secondary" aria-hidden="true"></span>
-            </div>
-          </div>
-          <button id="popup-dismiss" class="dismiss-btn" type="button">Dismiss</button>
-          <div class="hover-tip"></div>
-        </div>
-      </div>
-
-    <div class="toolbar-right">
-      <span class="toolbar-label">Show</span>
-      <div class="filters" id="status-filters"></div>
-      <div class="toolbar-label-filter">
-        <label class="cutoff-label" for="label-filter-input">Label</label>
-        <input
-          id="label-filter-input"
-          class="label-filter-input"
-          type="text"
-          placeholder="e.g. BUG"
-          autocomplete="off"
-        />
-      </div>
-      <div class="toolbar-cutoff">
-        <label class="cutoff-label" for="min-ticket-id">Min ticket</label>
-        <input
-          id="min-ticket-id"
-          class="cutoff-input"
-          type="number"
-          min="0"
-          step="1"
-          placeholder="e.g. 42"
-        />
+  <% if (mode === "landing") { %>
+    <div class="projects-panel">
+      <div class="projects-panel-title">Attached Projects</div>
+      <div class="projects-empty" id="projects-empty" style="display:none;">No attached projects.</div>
+      <div class="projects-wrap">
+        <table class="projects-table">
+          <thead>
+            <tr>
+              <th>project</th>
+              <th>path</th>
+              <th>status</th>
+              <th>actions</th>
+            </tr>
+          </thead>
+          <tbody id="project-rows"></tbody>
+        </table>
       </div>
     </div>
-  </div>
+  <% } %>
 
   <div class="status-line" id="tick-status">loading...</div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>id</th>
-          <th>title</th>
-          <th>status</th>
-          <th>priority</th>
-          <th>owner</th>
-          <th>labels</th>
-          <th>updated</th>
-          <th>updates</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
+  <% if (mode === "project") { %>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>title</th>
+            <th>status</th>
+            <th>priority</th>
+            <th>owner</th>
+            <th>labels</th>
+            <th>updated</th>
+            <th>updates</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  <% } %>
 </div>

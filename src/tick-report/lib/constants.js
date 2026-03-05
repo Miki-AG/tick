@@ -10,6 +10,11 @@ const ISSUES_DIR_NAME = "_ISSUES";
 const STATUS_FILE_NAME = "status.json";
 const PID_FILE = ".tick-report.pid";
 const LOG_FILE = ".tick-report.log";
+const GLOBAL_STATE_ENV = "TICK_REPORT_HOME";
+const GLOBAL_STATE_DIR_NAME = ".tick-report";
+const GLOBAL_DAEMON_FILE = "daemon.json";
+const GLOBAL_PROJECTS_FILE = "projects.json";
+const GLOBAL_LOG_FILE = "tick-report.log";
 
 module.exports = {
   DEFAULT_HOST,
@@ -22,4 +27,9 @@ module.exports = {
   STATUS_FILE_NAME,
   PID_FILE,
   LOG_FILE,
+  GLOBAL_STATE_ENV,
+  GLOBAL_STATE_DIR_NAME,
+  GLOBAL_DAEMON_FILE,
+  GLOBAL_PROJECTS_FILE,
+  GLOBAL_LOG_FILE,
 };

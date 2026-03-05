@@ -53,14 +53,15 @@ function printHelp() {
   tick-report serve [--host <ip-or-name>] [--port <number>] [--interval <milliseconds>]
 
 Commands:
-  start   Start tick-report in background (daemon mode) and store PID.
-  stop    Stop background tick-report from PID file.
-  status  Show if tick-report is running in current directory.
+  start   Start global tick-report daemon or reuse it, and attach current repository.
+  stop    Stop the global tick-report daemon.
+  status  Show global daemon status and attached project count.
   serve   Run HTTP server in foreground (mainly internal/debug).
 
 Behavior:
-  - Reads ./${ISSUES_DIR_NAME}/*.md tickets.
-  - Reads ./${ISSUES_DIR_NAME}/${STATUS_FILE_NAME} for per-ticket "updates".
+  - Reads attached repositories' ./${ISSUES_DIR_NAME}/*.md tickets.
+  - Reads attached repositories' ./${ISSUES_DIR_NAME}/${STATUS_FILE_NAME} for per-ticket "updates".
+  - Single daemon instance serves updates for all attached repositories.
   - Supports popup notifications from status.json:
       {
         "popup": { "level": "info|warn|error", "message": "..." },

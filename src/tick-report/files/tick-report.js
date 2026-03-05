@@ -2,47 +2,27 @@
 
 const config = window.__TICK_REPORT_CONFIG || {};
 const POLL_MS = Number.isFinite(config.pollMs) ? config.pollMs : 5000;
-const ROOT_DIR = String(config.rootDir || "");
-const PREFS_KEY = `tick-report:prefs:${ROOT_DIR}`;
-const FILTER_STATUSES = ["open", "doing", "blocked", "done", "wontfix", "unknown"];
-const statusFilters = Object.fromEntries(FILTER_STATUSES.map((status) => [status, true]));
+const MODE = config.mode === "project" ? "project" : "landing";
 
-let latestTickets = [];
-let minTicketId = null;
-let labelFilter = "";
-let dismissedPopupKey = null;
-let activePopupKey = null;
-let displayedPopupKey = null;
-let previousStatusById = null;
-let hasLoadedOnce = false;
-let audioCtx = null;
-let tickerResizeTimer = null;
-const popupTickerState = {
-  rafId: null,
-  lastTs: 0,
-  offset: 0,
-  distance: 0,
-  shiftPx: 0,
-  speedPxPerSecond: 44,
+const state = {
+  projects: [],
+  selectedProjectId: String(config.selectedProjectId || "").trim() || null,
+  tickets: [],
 };
 
-function normalizeStatus(value) {
-  const normalized = String(value || "").toLowerCase();
-  return FILTER_STATUSES.includes(normalized) ? normalized : "unknown";
+function setStatus(message) {
+  const el = document.getElementById("tick-status");
+  if (el) el.textContent = message;
 }
 
-function ticketUrl(ticket) {
-  const fileId = String(ticket.fileId || "").trim();
-  if (/^\d+$/.test(fileId)) {
-    return `/ticket/${encodeURIComponent(fileId)}`;
-  }
-  const fallback = String(ticket.id || "").trim();
-  return `/ticket/${encodeURIComponent(fallback)}`;
+function setLastRefresh() {
+  const el = document.getElementById("last-refresh");
+  if (el) el.textContent = `last refresh: ${new Date().toLocaleTimeString()}`;
 }
 
-function toTicketNumber(value) {
-  const parsed = Number.parseInt(String(value || ""), 10);
-  return Number.isFinite(parsed) ? parsed : null;
+function setActiveProjectPath(pathText) {
+  const el = document.getElementById("active-project-path");
+  if (el) el.textContent = pathText || "-";
 }
 
 function formatUpdatedParts(ticket) {
@@ -60,400 +40,158 @@ function formatUpdatedParts(ticket) {
   };
 }
 
-function parseUpdateLines(value) {
-  return String(value || "")
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+async function fetchJson(url, options) {
+  const res = await fetch(url, {
+    cache: "no-store",
+    ...(options || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
 }
 
-function ticketKey(ticket) {
-  return String(ticket.fileId || ticket.id || "").trim();
+function chooseSelectedProject(projects) {
+  if (!projects.length) return null;
+  if (state.selectedProjectId && projects.some((project) => project.id === state.selectedProjectId)) {
+    return state.selectedProjectId;
+  }
+  return projects[0].id;
 }
 
-function toUpdatedMillis(ticket) {
-  const raw = String(ticket.updatedAt || ticket.updated || "").trim();
-  if (!raw) return -1;
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return -1;
-  return parsed.getTime();
-}
-
-function findLatestUpdateMarker(tickets) {
-  let marker = null;
-
-  for (const ticket of tickets || []) {
-    const lines = parseUpdateLines(ticket.updates);
-    if (!lines.length) continue;
-
-    const updatedMillis = toUpdatedMillis(ticket);
-    const idNum = toTicketNumber(ticket.fileId || ticket.id) ?? -1;
-    const key = ticketKey(ticket);
-    if (!key) continue;
-
-    if (
-      !marker ||
-      updatedMillis > marker.updatedMillis ||
-      (updatedMillis === marker.updatedMillis && idNum > marker.idNum)
-    ) {
-      marker = {
-        ticketKey: key,
-        lineIndex: lines.length - 1,
-        updatedMillis,
-        idNum,
-      };
-    }
+async function loadProjects() {
+  const { res, data } = await fetchJson("/api/projects");
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to load project list.");
   }
 
-  return marker;
+  state.projects = Array.isArray(data.projects) ? data.projects : [];
+  state.selectedProjectId = chooseSelectedProject(state.projects);
 }
 
-function normalizeLabel(value) {
-  return String(value || "").trim().toLowerCase();
-}
+function renderProjectRows() {
+  const body = document.getElementById("project-rows");
+  const empty = document.getElementById("projects-empty");
+  if (!body || !empty) return;
 
-function ticketHasLabel(ticket, labelNeedle) {
-  const normalizedNeedle = normalizeLabel(labelNeedle);
-  if (!normalizedNeedle) return true;
-  const labels = String(ticket.labels || "")
-    .split(",")
-    .map((item) => normalizeLabel(item))
-    .filter((item) => item.length > 0);
-  return labels.includes(normalizedNeedle);
-}
-
-function popupKey(popup) {
-  const level = ["info", "warn", "error"].includes(popup.level) ? popup.level : "info";
-  return `${level}|${String(popup.message || "").trim()}`;
-}
-
-function loadPreferences() {
-  try {
-    const raw = window.localStorage.getItem(PREFS_KEY);
-    if (!raw) return;
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return;
-
-    if (parsed.statusFilters && typeof parsed.statusFilters === "object") {
-      for (const status of FILTER_STATUSES) {
-        if (typeof parsed.statusFilters[status] === "boolean") {
-          statusFilters[status] = parsed.statusFilters[status];
-        }
-        }
-      }
-
-      if (Number.isFinite(parsed.minTicketId) && parsed.minTicketId >= 0) {
-        minTicketId = parsed.minTicketId;
-      } else {
-        minTicketId = null;
-      }
-
-      if (typeof parsed.labelFilter === "string") {
-        labelFilter = parsed.labelFilter;
-      } else {
-        labelFilter = "";
-      }
-  } catch (err) {
-    // Ignore invalid/unavailable localStorage.
-  }
-}
-
-function savePreferences() {
-  try {
-    window.localStorage.setItem(
-      PREFS_KEY,
-        JSON.stringify({
-          statusFilters,
-          minTicketId,
-          labelFilter,
-        })
-      );
-  } catch (err) {
-    // Ignore invalid/unavailable localStorage.
-  }
-}
-
-function ensureAudioContext() {
-  if (audioCtx) return audioCtx;
-  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextCtor) return null;
-  audioCtx = new AudioContextCtor();
-  return audioCtx;
-}
-
-function playTone(frequency, durationSeconds, gainPeak) {
-  const ctx = ensureAudioContext();
-  if (!ctx) return;
-  if (ctx.state === "suspended") {
-    ctx.resume().catch(() => {});
-  }
-
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.value = frequency;
-  gain.gain.value = 0.0001;
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  const now = ctx.currentTime;
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(gainPeak, now + 0.015);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSeconds);
-  osc.start(now);
-  osc.stop(now + durationSeconds + 0.02);
-}
-
-function beepStatusChange() {
-  playTone(740, 0.07, 0.05);
-  window.setTimeout(() => playTone(560, 0.07, 0.045), 85);
-}
-
-function beepPopup() {
-  playTone(980, 0.11, 0.06);
-}
-
-function buildStatusMap(tickets) {
-  const map = {};
-  for (const ticket of tickets || []) {
-    if (!ticket || !ticket.id) continue;
-    map[String(ticket.id)] = normalizeStatus(ticket.status);
-  }
-  return map;
-}
-
-function hasStatusTransition(prevMap, nextMap) {
-  if (!prevMap || !nextMap) return false;
-  const ids = Object.keys(nextMap);
-  for (const id of ids) {
-    if (!Object.prototype.hasOwnProperty.call(prevMap, id)) continue;
-    if (prevMap[id] !== nextMap[id]) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function hidePopup() {
-  const el = document.getElementById("popup-inline");
-  stopPopupTickerAnimation(true);
-  el.style.display = "none";
-}
-
-function stopPopupTickerAnimation(resetOffset) {
-  if (popupTickerState.rafId !== null) {
-    window.cancelAnimationFrame(popupTickerState.rafId);
-    popupTickerState.rafId = null;
-  }
-  popupTickerState.lastTs = 0;
-  if (resetOffset) {
-    popupTickerState.offset = 0;
-  }
-}
-
-function startPopupTickerAnimation(track) {
-  stopPopupTickerAnimation(false);
-  const step = (ts) => {
-    if (popupTickerState.lastTs === 0) {
-      popupTickerState.lastTs = ts;
-    }
-    const dt = Math.max(0, (ts - popupTickerState.lastTs) / 1000);
-    popupTickerState.lastTs = ts;
-    popupTickerState.offset += popupTickerState.speedPxPerSecond * dt;
-    if (popupTickerState.distance > 0) {
-      while (popupTickerState.offset >= popupTickerState.distance) {
-        popupTickerState.offset -= popupTickerState.distance;
-      }
-      track.style.transform = `translateX(${popupTickerState.shiftPx - popupTickerState.offset}px)`;
-    }
-    popupTickerState.rafId = window.requestAnimationFrame(step);
-  };
-  popupTickerState.rafId = window.requestAnimationFrame(step);
-}
-
-function updatePopupTicker(options = {}) {
-  const preserveOffset = options.preserveOffset !== false;
-  const popup = document.getElementById("popup-inline");
-  const viewport = popup.querySelector(".message-viewport");
-  const track = popup.querySelector(".message-track");
-  const primary = popup.querySelector(".message-primary");
-  const secondary = popup.querySelector(".message-secondary");
-
-  stopPopupTickerAnimation(false);
-  popup.classList.remove("ticker");
-  secondary.textContent = "";
-  secondary.style.display = "none";
-  track.style.transform = "translateX(0)";
-
-  const viewportWidth = viewport.clientWidth;
-  const textWidth = primary.scrollWidth;
-  if (!viewportWidth || textWidth <= viewportWidth) {
-    popupTickerState.distance = 0;
-    if (!preserveOffset) {
-      popupTickerState.offset = 0;
-    }
+  body.innerHTML = "";
+  if (!state.projects.length) {
+    empty.style.display = "block";
     return;
   }
+  empty.style.display = "none";
 
-  const gap = 36;
-  const distance = viewportWidth + textWidth + gap;
-  popup.style.setProperty("--ticker-gap", `${gap}px`);
-  popup.classList.add("ticker");
-  popupTickerState.shiftPx = viewportWidth;
-  if (!preserveOffset || popupTickerState.distance !== distance) {
-    popupTickerState.offset = 0;
-  }
-  popupTickerState.distance = distance;
-  startPopupTickerAnimation(track);
-}
+  for (const project of state.projects) {
+    const tr = document.createElement("tr");
 
-function renderFilterButtons() {
-  const wrap = document.getElementById("status-filters");
-  wrap.innerHTML = "";
+    const nameTd = document.createElement("td");
+    nameTd.textContent = project.name || project.id;
+    tr.appendChild(nameTd);
 
-  for (const status of FILTER_STATUSES) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `filter-btn status-${status} ${statusFilters[status] ? "on" : "off"}`;
-    btn.textContent = status;
-    btn.addEventListener("click", () => {
-      statusFilters[status] = !statusFilters[status];
-      savePreferences();
-      renderFilterButtons();
-      renderRows(latestTickets);
+    const pathTd = document.createElement("td");
+    pathTd.className = "mono";
+    pathTd.textContent = project.path || "";
+    tr.appendChild(pathTd);
+
+    const statusTd = document.createElement("td");
+    if (!project.available) {
+      statusTd.textContent = "unavailable";
+    } else if (!project.tickEnabled) {
+      statusTd.textContent = "no _ISSUES";
+    } else {
+      statusTd.textContent = "ok";
+    }
+    tr.appendChild(statusTd);
+
+    const actionsTd = document.createElement("td");
+    actionsTd.className = "project-actions";
+
+    const go = document.createElement("a");
+    go.href = `/project/${encodeURIComponent(project.id)}`;
+    go.className = "project-go";
+    go.textContent = "GO";
+    actionsTd.appendChild(go);
+
+    const detach = document.createElement("button");
+    detach.type = "button";
+    detach.className = "project-detach";
+    detach.textContent = "DETACH";
+    detach.addEventListener("click", () => {
+      detachProject(project.id).catch((err) => {
+        setStatus(`Detach failed: ${err.message}`);
+      });
     });
-    wrap.appendChild(btn);
+    actionsTd.appendChild(detach);
+
+    tr.appendChild(actionsTd);
+    body.appendChild(tr);
   }
 }
 
-function setPopup(popup) {
-  const el = document.getElementById("popup-inline");
-  if (!popup || !popup.message) {
-    activePopupKey = null;
-    dismissedPopupKey = null;
-    displayedPopupKey = null;
-    hidePopup();
-    return { shown: false, key: null };
-  }
-
-  const level = ["info", "warn", "error"].includes(popup.level) ? popup.level : "info";
-  const key = popupKey({ level, message: popup.message });
-  activePopupKey = key;
-  const samePopupAsBefore = displayedPopupKey === key;
-
-  if (dismissedPopupKey === key) {
-    displayedPopupKey = null;
-    hidePopup();
-    return { shown: false, key };
-  }
-
-  const shown = displayedPopupKey !== key;
-  displayedPopupKey = key;
-  el.className = `popup-inline ${level}`;
-  el.querySelector(".level").textContent = level;
-  el.querySelector(".message-primary").textContent = popup.message;
-  el.querySelector(".message-secondary").textContent = popup.message;
-  el.querySelector(".hover-tip").textContent = popup.message;
-  el.style.display = "flex";
-  updatePopupTicker({ preserveOffset: samePopupAsBefore });
-  return { shown, key };
-}
-
-function setupPopupDismiss() {
-  const dismissBtn = document.getElementById("popup-dismiss");
-  dismissBtn.addEventListener("click", () => {
-    if (activePopupKey) {
-      dismissedPopupKey = activePopupKey;
-    }
-    hidePopup();
-  });
-}
-
-function setupAudioUnlock() {
-  const unlock = () => {
-    const ctx = ensureAudioContext();
-    if (ctx && ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
-    }
-  };
-  window.addEventListener("pointerdown", unlock, { passive: true });
-  window.addEventListener("keydown", unlock, { passive: true });
-}
-
-function setupTickerResizeHandler() {
-  window.addEventListener(
-    "resize",
-    () => {
-      if (tickerResizeTimer) {
-        window.clearTimeout(tickerResizeTimer);
-      }
-      tickerResizeTimer = window.setTimeout(() => {
-        const popup = document.getElementById("popup-inline");
-        if (popup && popup.style.display !== "none") {
-          updatePopupTicker({ preserveOffset: true });
-        }
-      }, 120);
+async function detachProject(projectId) {
+  setStatus(`Detaching project ${projectId}...`);
+  const { res, data } = await fetchJson(`/api/projects/${encodeURIComponent(projectId)}/detach`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-    { passive: true }
-  );
+  });
+
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to detach project.");
+  }
+
+  state.projects = Array.isArray(data.projects) ? data.projects : [];
+  state.selectedProjectId = chooseSelectedProject(state.projects);
+  renderProjectRows();
+  setActiveProjectPath("-");
+  setStatus(`Attached projects: ${state.projects.length}`);
+  setLastRefresh();
 }
 
-function renderRows(tickets) {
+function ticketUrl(ticket) {
+  const fileId = String(ticket.fileId || "").trim();
+  const ticketId = /^\d+$/.test(fileId) ? fileId : String(ticket.id || "").trim();
+  return `/project/${encodeURIComponent(state.selectedProjectId)}/ticket/${encodeURIComponent(ticketId)}`;
+}
+
+function renderRows() {
   const tbody = document.getElementById("rows");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  const visibleTickets = (tickets || []).filter((ticket) => {
-    if (!statusFilters[normalizeStatus(ticket.status)]) return false;
-    if (!ticketHasLabel(ticket, labelFilter)) return false;
-    if (minTicketId === null) return true;
-    const idNum = toTicketNumber(ticket.id);
-    return idNum !== null && idNum >= minTicketId;
-  });
-  const latestUpdateMarker = findLatestUpdateMarker(visibleTickets);
-
-  if (!visibleTickets.length) {
+  if (!state.tickets.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 8;
     td.className = "empty";
-    td.textContent = "No tickets match current filters.";
+    td.textContent = "No tickets found in selected project.";
     tr.appendChild(td);
     tbody.appendChild(tr);
     return;
   }
 
-  for (const ticket of visibleTickets) {
+  for (const ticket of state.tickets) {
     const tr = document.createElement("tr");
-    const url = ticketUrl(ticket);
 
     const idTd = document.createElement("td");
-    const idLink = document.createElement("a");
-    idLink.href = url;
-    idLink.className = "ticket-link mono";
-    idLink.textContent = ticket.id || "";
-    idTd.appendChild(idLink);
+    idTd.textContent = ticket.id || ticket.fileId || "";
     tr.appendChild(idTd);
 
     const titleTd = document.createElement("td");
-    const titleLink = document.createElement("a");
-    titleLink.href = url;
-    titleLink.className = "ticket-link";
-    titleLink.textContent = ticket.title || "";
-    titleTd.appendChild(titleLink);
+    const link = document.createElement("a");
+    link.className = "ticket-link";
+    link.href = ticketUrl(ticket);
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = ticket.title || "(untitled)";
+    titleTd.appendChild(link);
     tr.appendChild(titleTd);
 
     const statusTd = document.createElement("td");
-    const rawStatus = String(ticket.status || "").toLowerCase();
-    const pill = document.createElement("span");
-    pill.className = `status-pill ${
-      ["open", "doing", "blocked", "done", "wontfix"].includes(rawStatus)
-        ? `status-${rawStatus}`
-        : "status-unknown"
-    }`;
-    pill.textContent = rawStatus || "unknown";
-    statusTd.appendChild(pill);
+    const statusPill = document.createElement("span");
+    const status = String(ticket.status || "unknown").toLowerCase();
+    statusPill.className = `status-pill status-${status}`;
+    statusPill.textContent = status;
+    statusTd.appendChild(statusPill);
     tr.appendChild(statusTd);
 
     const priorityTd = document.createElement("td");
@@ -470,111 +208,84 @@ function renderRows(tickets) {
 
     const updatedTd = document.createElement("td");
     updatedTd.className = "updated-cell";
-    const updatedParts = formatUpdatedParts(ticket);
-    const updatedDate = document.createElement("div");
-    updatedDate.className = "updated-date";
-    updatedDate.textContent = updatedParts.date || "";
-    const updatedTime = document.createElement("div");
-    updatedTime.className = "updated-time";
-    updatedTime.textContent = updatedParts.time || "";
-    updatedTd.appendChild(updatedDate);
-    updatedTd.appendChild(updatedTime);
+    const updated = formatUpdatedParts(ticket);
+    const dateSpan = document.createElement("span");
+    dateSpan.className = "updated-date";
+    dateSpan.textContent = updated.date || "";
+    updatedTd.appendChild(dateSpan);
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "updated-time";
+    timeSpan.textContent = updated.time || "";
+    updatedTd.appendChild(timeSpan);
     tr.appendChild(updatedTd);
 
     const updatesTd = document.createElement("td");
     updatesTd.className = "updates-cell";
-    const lines = parseUpdateLines(ticket.updates);
-    const key = ticketKey(ticket);
-    for (let i = 0; i < lines.length; i += 1) {
-      const lineEl = document.createElement("div");
-      lineEl.className = "update-line";
-      lineEl.textContent = lines[i];
-      if (
-        latestUpdateMarker &&
-        latestUpdateMarker.ticketKey === key &&
-        latestUpdateMarker.lineIndex === i
-      ) {
-        lineEl.classList.add("latest-update-line");
-      }
-      updatesTd.appendChild(lineEl);
-    }
+    updatesTd.textContent = String(ticket.updates || "");
     tr.appendChild(updatesTd);
 
     tbody.appendChild(tr);
   }
 }
 
-function setupMinTicketFilter() {
-  const input = document.getElementById("min-ticket-id");
-  input.value = minTicketId === null ? "" : String(minTicketId);
-  input.addEventListener("input", () => {
-    const raw = String(input.value || "").trim();
-    if (raw === "") {
-      minTicketId = null;
-    } else {
-      const parsed = Number.parseInt(raw, 10);
-      minTicketId = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-    }
-    savePreferences();
-    renderRows(latestTickets);
-  });
-}
-
-function setupLabelFilter() {
-  const input = document.getElementById("label-filter-input");
-  input.value = labelFilter;
-  input.addEventListener("input", () => {
-    labelFilter = String(input.value || "").trim();
-    savePreferences();
-    renderRows(latestTickets);
-  });
-}
-
-async function loadReport() {
-  try {
-    const res = await fetch("/api/report", { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    const statusEl = document.getElementById("tick-status");
-    const rootEl = document.getElementById("root-dir");
-    if (rootEl && data.rootDir) {
-      rootEl.textContent = data.rootDir;
-    }
-    if (!data.tickEnabled) {
-      statusEl.textContent = "tick is not initialized in this folder (missing ./_ISSUES).";
-    } else {
-      statusEl.textContent = "Watching ./_ISSUES and ./_ISSUES/status.json";
-    }
-
-    const nextStatusById = buildStatusMap(data.tickets || []);
-    const statusChanged = hasStatusTransition(previousStatusById, nextStatusById);
-    previousStatusById = nextStatusById;
-
-    latestTickets = data.tickets || [];
-    renderRows(latestTickets);
-    const popupState = setPopup(data.popup || null);
-
-    if (hasLoadedOnce && statusChanged) {
-      beepStatusChange();
-    }
-    if (hasLoadedOnce && popupState && popupState.shown && popupState.key) {
-      beepPopup();
-    }
-
-    document.getElementById("last-refresh").textContent = `last refresh: ${new Date().toLocaleTimeString()}`;
-    hasLoadedOnce = true;
-  } catch (err) {
-    setPopup({ level: "error", message: `Unable to fetch report: ${err.message}` });
+async function loadProjectReport() {
+  if (!state.selectedProjectId) {
+    state.tickets = [];
+    setActiveProjectPath("");
+    renderRows();
+    setStatus("Project not found.");
+    setLastRefresh();
+    return;
   }
+
+  const { res, data } = await fetchJson(
+    `/api/projects/${encodeURIComponent(state.selectedProjectId)}/report`
+  );
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to load report.");
+  }
+
+  state.tickets = Array.isArray(data.tickets) ? data.tickets : [];
+  if (data.project && data.project.path) {
+    setActiveProjectPath(data.project.path);
+  }
+  renderRows();
+
+  const popupMessage = data.popup && data.popup.message ? ` | popup: ${data.popup.message}` : "";
+  const projectLabel = data.project && data.project.path ? data.project.path : state.selectedProjectId;
+  setStatus(`Project: ${projectLabel} | tickets: ${state.tickets.length}${popupMessage}`);
+  setLastRefresh();
 }
 
-loadPreferences();
-renderFilterButtons();
-setupMinTicketFilter();
-setupLabelFilter();
-setupPopupDismiss();
-setupAudioUnlock();
-setupTickerResizeHandler();
-loadReport();
-window.setInterval(loadReport, POLL_MS);
+async function refreshLanding() {
+  await loadProjects();
+  renderProjectRows();
+  setActiveProjectPath("-");
+  setStatus(`Attached projects: ${state.projects.length}`);
+  setLastRefresh();
+}
+
+async function refreshProject() {
+  await loadProjectReport();
+}
+
+async function init() {
+  try {
+    if (MODE === "landing") {
+      await refreshLanding();
+    } else {
+      await refreshProject();
+    }
+  } catch (err) {
+    setStatus(`Unable to load tick-report data: ${err.message}`);
+  }
+
+  window.setInterval(() => {
+    const runner = MODE === "landing" ? refreshLanding : refreshProject;
+    runner().catch((err) => {
+      setStatus(`Refresh failed: ${err.message}`);
+    });
+  }, POLL_MS);
+}
+
+init();
