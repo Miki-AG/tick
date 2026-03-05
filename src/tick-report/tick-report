@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+
+const SCRIPT_PATH = fs.realpathSync(__filename);
+const SCRIPT_DIR = path.dirname(SCRIPT_PATH);
+
+const { fail, failProminent, parseServeOptions, printHelp } = require(path.join(
+  SCRIPT_DIR,
+  "lib",
+  "cli"
+));
+const { createServer } = require(path.join(SCRIPT_DIR, "lib", "server"));
+const { showStatus, startDaemon, stopDaemon } = require(path.join(
+  SCRIPT_DIR,
+  "lib",
+  "daemon"
+));
+
+function main() {
+  const argv = process.argv.slice(2);
+  const first = argv[0];
+
+  if (!first || first === "serve") {
+    const options = parseServeOptions(first === "serve" ? argv.slice(1) : argv);
+    createServer(options.port, options.intervalMs, options.host);
+    return;
+  }
+
+  if (first === "-h" || first === "--help" || first === "help") {
+    printHelp();
+    return;
+  }
+
+  if (first === "start") {
+    const options = parseServeOptions(argv.slice(1));
+    startDaemon(options, SCRIPT_PATH, fail, failProminent);
+    return;
+  }
+
+  if (first === "stop") {
+    if (argv.length > 1) fail("stop does not accept options");
+    stopDaemon(fail);
+    return;
+  }
+
+  if (first === "status") {
+    if (argv.length > 1) fail("status does not accept options");
+    showStatus();
+    return;
+  }
+
+  fail(`Unknown command: ${first}`);
+}
+
+main();

@@ -1,0 +1,25 @@
+"use strict";
+
+const DEFAULT_HOST = "127.0.0.1";
+const DEFAULT_PORT = 4174;
+const DEFAULT_INTERVAL_MS = 5000;
+const STARTUP_STABILITY_MS = 1000;
+const STOP_TERM_WAIT_MS = 2000;
+const STOP_KILL_WAIT_MS = 1200;
+const ISSUES_DIR_NAME = "_ISSUES";
+const STATUS_FILE_NAME = "status.json";
+const PID_FILE = ".tick-report.pid";
+const LOG_FILE = ".tick-report.log";
+
+module.exports = {
+  DEFAULT_HOST,
+  DEFAULT_PORT,
+  DEFAULT_INTERVAL_MS,
+  STARTUP_STABILITY_MS,
+  STOP_TERM_WAIT_MS,
+  STOP_KILL_WAIT_MS,
+  ISSUES_DIR_NAME,
+  STATUS_FILE_NAME,
+  PID_FILE,
+  LOG_FILE,
+};
