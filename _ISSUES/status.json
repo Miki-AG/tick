@@ -3,7 +3,7 @@
     "level": "info",
     "message": ""
   },
-  "0003": {
-    "updates": "Completed: tests moved to test/tick and both ./tick test and npm test pass."
+  "0004": {
+    "updates": "Completed: wrote tick-report migration requirements document."
   }
 }
