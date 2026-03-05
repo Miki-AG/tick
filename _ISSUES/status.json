@@ -1,0 +1,9 @@
+{
+  "popup": {
+    "level": "info",
+    "message": ""
+  },
+  "0002": {
+    "updates": "Completed: tick sources moved to src/tick with root wrapper and passing tests."
+  }
+}

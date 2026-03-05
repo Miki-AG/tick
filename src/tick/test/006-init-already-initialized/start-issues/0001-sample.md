@@ -1,0 +1,1 @@
+---\nid: 0001\ntitle: Sample\nstatus: open\npriority: p2\nowner:\nlabels: []\ncreated: 2026-02-01\nupdated: 2026-02-01\n---\n\n## Context\nSeed.\n\n## Acceptance criteria\n- [ ] One\n\n## Log\n- 2026-02-01: created\n

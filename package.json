@@ -1,0 +1,12 @@
+{
+  "name": "tick",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local file-based issue tracker.",
+  "scripts": {
+    "test": "node src/tick/test/run.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,63 @@
+#!/bin/zsh
+
+set -euo pipefail
+SCRIPT_DIR="${0:A:h}"
+
+print_help() {
+  cat <<'HELP'
+Usage:
+  tick -h
+  tick help
+  tick <init|new|list|update|test> [options]
+
+tick init
+  Initialize the ticket repo (creates ./_ISSUES and README).
+
+tick new "Issue title" [--priority p0|p1|p2|p3] [--owner name] [--labels a,b,c]
+  Create a new ticket in ./_ISSUES from the tool template.
+
+tick list [--status open|doing|blocked|done|wontfix] [--owner name] [--label foo]
+  List tickets with optional filters.
+
+tick update <id> [options]
+  Update a ticket's front matter, labels, or body sections.
+
+tick test [scenario]
+  Run test scenarios under ./src/tick/test. If no scenario is given, runs all.
+HELP
+}
+
+cmd="${1:-}"
+if [ -n "$cmd" ]; then
+  shift
+fi
+
+case "$cmd" in
+  -h|--help|help)
+    print_help
+    ;;
+  init)
+    node "$SCRIPT_DIR/init.js" "$@"
+    ;;
+  new)
+    node "$SCRIPT_DIR/new.js" "$@"
+    ;;
+  list)
+    node "$SCRIPT_DIR/list.js" "$@"
+    ;;
+  update)
+    node "$SCRIPT_DIR/update.js" "$@"
+    ;;
+  test)
+    node "$SCRIPT_DIR/test/run.js" "$@"
+    ;;
+  "")
+    print_help >&2
+    exit 2
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    print_help >&2
+    exit 1
+    ;;
+esac
