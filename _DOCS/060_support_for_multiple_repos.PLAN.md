@@ -47,7 +47,7 @@ Notes:
    - `listProjects()` for landing page and API.
 4. Update server routing/API for multi-project stateless access.
    - Add project list endpoint (for landing page).
-   - Add project-specific endpoints (report/ticket) keyed by project id/path.
+   - Add project-specific endpoints (report/ticket read + ticket update) keyed by project id/path.
    - Keep backward compatibility where reasonable (redirect/alias legacy routes).
 5. Update landing page and per-project navigation.
    - `/` shows attached projects with path + `GO` + `DETACH`.
@@ -80,6 +80,9 @@ Notes:
    - returns report payload for selected project.
 5. `GET /api/projects/:id/ticket/:ticketId`
    - returns ticket payload for selected project.
+6. `POST` or `PATCH /api/projects/:id/ticket/:ticketId`
+   - updates ticket fields for selected project only.
+   - must reject requests that do not resolve to a valid attached project.
 
 ## Verification Plan
 
@@ -89,6 +92,7 @@ Notes:
    - `/` lists both repos with path + GO + DETACH.
 3. Project isolation check:
    - load two project pages, verify each shows correct repo-specific ticket data.
+   - update a ticket in project A and verify project B ticket files remain unchanged.
 4. Detach check:
    - detach one repo, confirm other remains and `_ISSUES` files unchanged.
 5. Idempotency check:
@@ -104,8 +108,9 @@ Notes:
 2. Attached projects are tracked in global state, not per-repo daemon state.
 3. Server handles project requests statelessly and serves any attached project UI.
 4. Landing page + GO/DETACH flows work and are tested.
-5. Existing core CLI flows remain operational.
-6. Documentation reflects final architecture and operations.
+5. Project-scoped ticket update endpoints work and preserve cross-project isolation.
+6. Existing core CLI flows remain operational.
+7. Documentation reflects final architecture and operations.
 
 ## Risks And Mitigations
 

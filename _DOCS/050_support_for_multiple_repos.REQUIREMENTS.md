@@ -51,6 +51,9 @@ Out of scope:
 9. If no instance is running, `tick-report start` must start one; if an instance is running, `start` must reuse it.
 10. Update endpoints must resolve project identity (for example project id/path) and return that project's data regardless of request origin.
 11. Concurrent polling from multiple project pages must return correct project-specific updates.
+12. Individual ticket updates must remain supported in multi-repo mode.
+13. Ticket update requests must be project-scoped and include/resolve project identity.
+14. A ticket update for project A must never modify tickets in project B.
 
 ## Behavior and Compatibility
 
@@ -84,3 +87,5 @@ Out of scope:
 7. Starting `tick-report` multiple times in the same repository does not create duplicates.
 8. Two project pages polling concurrently receive correct project-specific updates from the same running instance.
 9. Existing single-repo flows (`start`, `status`, `stop`) still pass smoke checks.
+10. Updating ticket `X` in project A updates only project A data and does not change project B data.
+11. Existing single-repo ticket update flow remains functional.
