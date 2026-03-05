@@ -3,7 +3,7 @@
     "level": "info",
     "message": ""
   },
-  "0006": {
-    "updates": "Completed: tick-report migrated with local wrapper, smoke tests, and updated docs."
+  "0008": {
+    "updates": "Completed: docs now require one global stateless tick-report instance serving all project UIs."
   }
 }
