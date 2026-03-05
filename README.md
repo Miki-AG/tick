@@ -49,8 +49,8 @@ node test/tick-report/run.js
 If you want to call `tick` globally, add this repo to your `PATH` or set an alias:
 
 ```sh
-alias tick="/Users/miguelarmengol/_dev/ocecat/tick/tick"
-alias tick-report="/Users/miguelarmengol/_dev/ocecat/tick/tick-report"
+alias tick="/Users/<user>/_dev/ocecat/tick/tick"
+alias tick-report="/Users/<user>/_dev/ocecat/tick/tick-report"
 ```
 
 ## Repository layout
