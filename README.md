@@ -17,7 +17,7 @@ It provides:
 
 ## Local usage
 
-Run commands from the repository root:
+Run commands from the repository root, or instruct your LLM agent to run `tick`/`tick-report` from that root:
 
 ```sh
 ./tick -h
