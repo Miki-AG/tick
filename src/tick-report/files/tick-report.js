@@ -30,6 +30,17 @@ function setActiveProjectPath(pathText) {
   if (el) el.textContent = pathText || "-";
 }
 
+function setHeaderProjectBreadcrumb(project) {
+  const link = document.getElementById("header-project-link");
+  if (!link) return;
+  const projectId = String((project && project.id) || state.selectedProjectId || "").trim();
+  if (projectId) {
+    link.href = `/project/${encodeURIComponent(projectId)}`;
+  }
+  const label = String((project && (project.name || project.id)) || projectId || "project").trim();
+  link.textContent = label || "project";
+}
+
 function normalizeStatus(value) {
   const normalized = String(value || "").toLowerCase();
   return FILTER_STATUSES.includes(normalized) ? normalized : "unknown";
@@ -377,6 +388,9 @@ async function loadProjectReport() {
   state.tickets = Array.isArray(data.tickets) ? data.tickets : [];
   if (data.project && data.project.path) {
     setActiveProjectPath(data.project.path);
+  }
+  if (data.project) {
+    setHeaderProjectBreadcrumb(data.project);
   }
   const visibleCount = renderRows();
 

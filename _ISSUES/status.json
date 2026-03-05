@@ -1,5 +1,5 @@
 {
   "0012": {
-    "updates": "Done: ticket breadcrumb project segment now shows folder name (not project id), while link target remains `/project/:id`."
+    "updates": "Done: breadcrumbs are now visible on landing, project, and ticket pages; ticket and project segments keep correct link targets."
   }
 }

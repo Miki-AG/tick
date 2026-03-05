@@ -231,12 +231,32 @@ async function runScenarios() {
       "Landing page must not show ticket filter toolbar."
     );
     assert(
+      landingHtml.text.includes("href=\"/\">tick-report</a>"),
+      "Landing page must show breadcrumb link to itself."
+    );
+    assert(
       !projectHtml.text.includes("id=\"project-rows\""),
       "Project page must not show project list."
     );
     assert(
       projectHtml.text.includes("id=\"rows\""),
       "Project page must show ticket list."
+    );
+    assert(
+      projectHtml.text.includes("href=\"/\">tick-report</a>"),
+      "Project page breadcrumb must link tick-report to landing page."
+    );
+    assert(
+      projectHtml.text.includes("id=\"header-project-link\""),
+      "Project page must show project breadcrumb segment."
+    );
+    assert(
+      projectHtml.text.includes(`href=\"/project/${encodeURIComponent(projectA.id)}\"`),
+      "Project page project breadcrumb must link to current project page."
+    );
+    assert(
+      projectHtml.text.includes(">repo-a<"),
+      "Project page project breadcrumb should show project folder name."
     );
     assert(
       projectHtml.text.includes("id=\"status-filters\""),
