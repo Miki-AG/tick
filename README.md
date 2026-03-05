@@ -1,6 +1,12 @@
 # tick
 
-Local CLI tools for issue tracking and local status reporting.
+`tick` is a text-based ticketing system designed for AI-agent workflows.
+
+It provides:
+
+- A simple executable (`./tick`) that makes it easy for AI agents to create, update, and track tickets.
+- Full observability: there is no hidden runtime state; all ticket state lives in markdown files under `./_ISSUES`.
+- A companion monitor (`tick-report`) for watching multiple `tick` projects simultaneously.
 
 ## Requirements
 
@@ -35,6 +41,16 @@ Behavior summary:
 - Only one `tick-report` daemon runs at a time.
 - Running `start` in another repo reuses the running daemon and attaches that repo.
 - The same daemon serves updates for all attached project UIs.
+- `tick-report` exposes a webpage per project that updates in real time as AI agents update tickets.
+- Route behavior:
+  - `/` shows attached projects only.
+  - `/project/:projectId` shows tickets for one project only.
+  - `/project/:projectId/ticket/:ticketId` shows the editable ticket detail view.
+- Breadcrumbs are visible on every page (`tick-report` -> landing, project segment -> project page).
+- Project page includes ticket filter controls (status toggles, label filter, min ticket id).
+- Designed for Tailscale-first usage:
+  - default host is your Tailscale IP when available,
+  - any device on your tailnet can open the report URLs and see live updates.
 
 ## Tests
 
