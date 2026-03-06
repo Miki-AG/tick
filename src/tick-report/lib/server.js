@@ -773,6 +773,14 @@ function createServer(port, intervalMs, host = "127.0.0.1") {
       return;
     }
 
+    if (pathname.startsWith("/api/")) {
+      sendJson(res, 404, {
+        generatedAt: new Date().toISOString(),
+        error: `API route not found: ${pathname}`,
+      });
+      return;
+    }
+
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Not found\n");
   });
