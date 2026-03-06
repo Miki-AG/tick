@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tick-report</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script id="tick-report-bootstrap-data" type="application/json">{}</script>
+    <script>
+      (function () {
+        var el = document.getElementById("tick-report-bootstrap-data");
+        if (!el) return;
+        try {
+          window.__TICK_REPORT_BOOTSTRAP__ = JSON.parse(el.textContent || "{}");
+        } catch (_err) {
+          window.__TICK_REPORT_BOOTSTRAP__ = {};
+        }
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

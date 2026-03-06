@@ -474,6 +474,7 @@ tr:last-child td {
   border-color: rgba(148, 165, 186, 0.5);
 }
 
+.status-parked,
 .status-unknown {
   color: #c3ccd8;
   background: rgba(115, 131, 153, 0.15);

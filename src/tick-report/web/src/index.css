@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 46% 8%;
+    --foreground: 210 40% 96%;
+    --card: 223 40% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 223 40% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 193 90% 57%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 216 25% 24%;
+    --input: 216 25% 24%;
+    --ring: 193 90% 57%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  .mono {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+}

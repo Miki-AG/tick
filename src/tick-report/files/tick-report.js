@@ -3,7 +3,7 @@
 const config = window.__TICK_REPORT_CONFIG || {};
 const POLL_MS = Number.isFinite(config.pollMs) ? config.pollMs : 5000;
 const MODE = config.mode === "project" ? "project" : "landing";
-const FILTER_STATUSES = ["open", "doing", "blocked", "done", "wontfix", "unknown"];
+const FILTER_STATUSES = ["open", "doing", "blocked", "done", "wontfix", "parked"];
 
 const state = {
   projects: [],
@@ -43,7 +43,7 @@ function setHeaderProjectBreadcrumb(project) {
 
 function normalizeStatus(value) {
   const normalized = String(value || "").toLowerCase();
-  return FILTER_STATUSES.includes(normalized) ? normalized : "unknown";
+  return FILTER_STATUSES.includes(normalized) ? normalized : "parked";
 }
 
 function toTicketNumber(value) {
@@ -326,7 +326,7 @@ function renderRows() {
 
     const statusTd = document.createElement("td");
     const statusPill = document.createElement("span");
-    const status = String(ticket.status || "unknown").toLowerCase();
+    const status = String(ticket.status || "parked").toLowerCase();
     statusPill.className = `status-pill status-${status}`;
     statusPill.textContent = status;
     statusTd.appendChild(statusPill);
