@@ -215,73 +215,125 @@ async function runScenarios() {
     assert(projectHtml.res.ok, "Project page must load.");
     assert(ticketHtml.res.ok, "Ticket page must load.");
     assert(
-      landingHtml.text.includes("id=\"project-rows\""),
-      "Landing page must show project list."
+      landingHtml.text.includes("id=\"root\""),
+      "Landing page must include React mount root."
     );
     assert(
-      !landingHtml.text.includes("id=\"rows\""),
-      "Landing page must not show ticket list."
+      landingHtml.text.includes("id=\"tick-report-bootstrap-data\""),
+      "Landing page must include bootstrap config payload."
     );
     assert(
-      !landingHtml.text.includes(">VIEW<"),
-      "Landing page must not show VIEW action."
+      landingHtml.text.includes("\"mode\":\"landing\""),
+      "Landing page bootstrap config must set landing mode."
     );
     assert(
-      !landingHtml.text.includes("id=\"status-filters\""),
-      "Landing page must not show ticket filter toolbar."
+      /\/assets\/index-[^"]+\.js/.test(landingHtml.text),
+      "Landing page should reference built frontend JS asset."
     );
     assert(
-      landingHtml.text.includes("href=\"/\">tick-report</a>"),
-      "Landing page must show breadcrumb link to itself."
+      !landingHtml.text.includes("\"mode\":\"project\""),
+      "Landing page bootstrap config must not set project mode."
     );
     assert(
-      !projectHtml.text.includes("id=\"project-rows\""),
-      "Project page must not show project list."
+      projectHtml.text.includes("id=\"tick-report-bootstrap-data\""),
+      "Project page must include bootstrap config payload."
     );
     assert(
-      projectHtml.text.includes("id=\"rows\""),
-      "Project page must show ticket list."
+      projectHtml.text.includes("\"mode\":\"project\""),
+      "Project page bootstrap config must set project mode."
     );
     assert(
-      projectHtml.text.includes("href=\"/\">tick-report</a>"),
-      "Project page breadcrumb must link tick-report to landing page."
+      projectHtml.text.includes(`\"selectedProjectId\":\"${projectA.id}\"`),
+      "Project page bootstrap must include selected project id."
     );
     assert(
-      projectHtml.text.includes("id=\"header-project-link\""),
-      "Project page must show project breadcrumb segment."
+      projectHtml.text.includes(`\"projectId\":\"${projectA.id}\"`),
+      "Project page bootstrap must include project id."
     );
     assert(
-      projectHtml.text.includes(`href=\"/project/${encodeURIComponent(projectA.id)}\"`),
-      "Project page project breadcrumb must link to current project page."
+      !projectHtml.text.includes("\"mode\":\"ticket\""),
+      "Project page bootstrap config must not set ticket mode."
     );
     assert(
-      projectHtml.text.includes(">repo-a<"),
-      "Project page project breadcrumb should show project folder name."
+      ticketHtml.text.includes("id=\"tick-report-bootstrap-data\""),
+      "Ticket page must include bootstrap config payload."
     );
     assert(
-      projectHtml.text.includes("id=\"status-filters\""),
-      "Project page must show status filter toggles."
+      ticketHtml.text.includes("\"mode\":\"ticket\""),
+      "Ticket page bootstrap config must set ticket mode."
     );
     assert(
-      projectHtml.text.includes("id=\"min-ticket-id\""),
-      "Project page must show minimum ticket filter input."
+      ticketHtml.text.includes(`\"projectId\":\"${projectA.id}\"`),
+      "Ticket page bootstrap must include project id."
     );
     assert(
-      ticketHtml.text.includes("href=\"/\">tick-report</a>"),
-      "Ticket page breadcrumb must link tick-report to landing page."
+      ticketHtml.text.includes("\"ticketId\":\"0001\""),
+      "Ticket page bootstrap must include ticket id."
     );
     assert(
-      ticketHtml.text.includes(`href=\"/project/${encodeURIComponent(projectA.id)}\"`),
-      "Ticket page breadcrumb must link project id to the project page."
+      ticketHtml.text.includes(repoAReal),
+      "Ticket page bootstrap must include project path."
     );
+
+    const configA = await fetchJson(`${baseUrl}/api/projects/${encodeURIComponent(projectA.id)}/config`);
+    assert(configA.res.ok, "Project config endpoint must succeed.");
     assert(
-      ticketHtml.text.includes(">repo-a<"),
-      "Ticket page breadcrumb project segment should show project folder name."
+      configA.data &&
+        configA.data.config &&
+        configA.data.config.columns &&
+        configA.data.config.columns.desktop &&
+        configA.data.config.columns.mobile &&
+        configA.data.config.columns.desktop.title === true &&
+        configA.data.config.columns.mobile.title === true &&
+        configA.data.config.columns.mobile.id === true &&
+        configA.data.config.columns.mobile.status === true &&
+        configA.data.config.columns.mobile.owner === false &&
+        configA.data.config.columns.mobile.labels === false &&
+        configA.data.config.columns.mobile.updated === false &&
+        configA.data.config.columns.mobile.updates === false,
+      "Project config should default mobile columns to id/title/status only."
     );
+
+    const configUpdateA = await fetchJson(
+      `${baseUrl}/api/projects/${encodeURIComponent(projectA.id)}/config`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          columns: {
+            desktop: {
+              owner: false,
+            },
+            mobile: {
+              updates: false,
+            },
+          },
+        }),
+      }
+    );
+    assert(configUpdateA.res.ok, "Project config update endpoint must succeed.");
     assert(
-      ticketHtml.text.includes(">ticket 0001<"),
-      "Ticket page breadcrumb must render ticket segment separately."
+      configUpdateA.data &&
+        configUpdateA.data.config &&
+        configUpdateA.data.config.columns &&
+        configUpdateA.data.config.columns.desktop &&
+        configUpdateA.data.config.columns.mobile &&
+        configUpdateA.data.config.columns.desktop.owner === false &&
+        configUpdateA.data.config.columns.mobile.updates === false,
+      "Project config update should persist requested desktop/mobile column visibility."
     );
+
+    const repoAConfigPath = path.join(repoA, "_ISSUES", "config.json");
+    const repoBConfigPath = path.join(repoB, "_ISSUES", "config.json");
+    assert(fs.existsSync(repoAConfigPath), "Repo A config file should be created.");
+    const repoAConfigRaw = fs.readFileSync(repoAConfigPath, "utf8");
+    assert(repoAConfigRaw.includes("\"desktop\""), "Repo A config should persist desktop section.");
+    assert(repoAConfigRaw.includes("\"mobile\""), "Repo A config should persist mobile section.");
+    assert(repoAConfigRaw.includes("\"owner\": false"), "Repo A config should persist desktop owner=false.");
+    assert(repoAConfigRaw.includes("\"updates\": false"), "Repo A config should persist mobile updates=false.");
+    assert(!fs.existsSync(repoBConfigPath), "Repo B config file must not be created by Repo A update.");
 
     const updateRes = await fetchJson(
       `${baseUrl}/api/projects/${encodeURIComponent(projectA.id)}/ticket/0001`,

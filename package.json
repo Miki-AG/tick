@@ -5,7 +5,10 @@
   "description": "Local file-based issue tracker.",
   "scripts": {
     "test": "node test/tick/run.js",
-    "test:tick-report": "node test/tick-report/run.js"
+    "test:tick-report": "npm run build:tick-report-web && node test/tick-report/run.js",
+    "dev:tick-report-web": "npm --prefix src/tick-report/web run dev",
+    "build:tick-report-web": "npm --prefix src/tick-report/web run build",
+    "preview:tick-report-web": "npm --prefix src/tick-report/web run preview"
   },
   "engines": {
     "node": ">=18"

@@ -8,6 +8,7 @@ const STOP_TERM_WAIT_MS = 2000;
 const STOP_KILL_WAIT_MS = 1200;
 const ISSUES_DIR_NAME = "_ISSUES";
 const STATUS_FILE_NAME = "status.json";
+const CONFIG_FILE_NAME = "config.json";
 const PID_FILE = ".tick-report.pid";
 const LOG_FILE = ".tick-report.log";
 const GLOBAL_STATE_ENV = "TICK_REPORT_HOME";
@@ -25,6 +26,7 @@ module.exports = {
   STOP_KILL_WAIT_MS,
   ISSUES_DIR_NAME,
   STATUS_FILE_NAME,
+  CONFIG_FILE_NAME,
   PID_FILE,
   LOG_FILE,
   GLOBAL_STATE_ENV,

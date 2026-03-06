@@ -62,6 +62,8 @@ Behavior:
   - Reads attached repositories' ./${ISSUES_DIR_NAME}/*.md tickets.
   - Reads attached repositories' ./${ISSUES_DIR_NAME}/${STATUS_FILE_NAME} for per-ticket "updates".
   - Single daemon instance serves updates for all attached repositories.
+  - Serves shadcn web UI by default when build assets exist in src/tick-report/web/dist.
+  - Set TICK_REPORT_UI_MODE=legacy to force legacy EJS UI fallback.
   - Supports popup notifications from status.json:
       {
         "popup": { "level": "info|warn|error", "message": "..." },

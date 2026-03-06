@@ -29,6 +29,12 @@ Run commands from the repository root, or instruct your LLM agent to run `tick`/
 
 ## tick-report usage
 
+Build the web UI once before running `tick-report`:
+
+```sh
+npm run build:tick-report-web
+```
+
 Run report commands from any project root. `start` attaches that project to one global `tick-report` instance:
 
 ```sh
@@ -43,10 +49,20 @@ Behavior summary:
 - Only one `tick-report` daemon runs at a time.
 - Running `start` in another repo reuses the running daemon and attaches that repo.
 - The same daemon serves updates for all attached project UIs.
+- By default, `tick-report` serves the shadcn/Tailwind frontend for:
+  - `/` (project list),
+  - `/project/:projectId` (ticket list),
+  - `/project/:projectId/ticket/:ticketId` (ticket editor).
 - `tick-report` exposes a webpage per project that updates in real time as AI agents update tickets.
 - Designed for Tailscale-first usage:
   - default host is your Tailscale IP when available,
   - any device on your tailnet can open the report URLs and see live updates.
+
+Legacy UI fallback (for rollback/debug):
+
+```sh
+TICK_REPORT_UI_MODE=legacy ./tick-report start --port 4174
+```
 
 ### Monitor from any screen on your network
 

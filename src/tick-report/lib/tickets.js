@@ -2,7 +2,9 @@
 
 const fs = require("fs");
 const path = require("path");
-const { ISSUES_DIR_NAME, STATUS_FILE_NAME } = require("./constants");
+const { CONFIG_FILE_NAME, ISSUES_DIR_NAME, STATUS_FILE_NAME } = require("./constants");
+
+const COLUMN_KEYS = ["id", "title", "status", "priority", "owner", "labels", "updated", "updates"];
 
 function unquote(value) {
   const trimmed = String(value || "").trim();
@@ -158,6 +160,123 @@ function readStatusData(issuesDir) {
   }
 
   return { updatesById, popup };
+}
+
+function buildDefaultDesktopColumns() {
+  return {
+    id: true,
+    title: true,
+    status: true,
+    priority: true,
+    owner: true,
+    labels: true,
+    updated: true,
+    updates: true,
+  };
+}
+
+function buildDefaultMobileColumns() {
+  return {
+    id: true,
+    title: true,
+    status: true,
+    priority: false,
+    owner: false,
+    labels: false,
+    updated: false,
+    updates: false,
+  };
+}
+
+function buildDefaultColumnConfig() {
+  return {
+    desktop: buildDefaultDesktopColumns(),
+    mobile: buildDefaultMobileColumns(),
+  };
+}
+
+function normalizeBoolean(value, fallback) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const lowered = value.trim().toLowerCase();
+    if (lowered === "true") return true;
+    if (lowered === "false") return false;
+  }
+  return fallback;
+}
+
+function normalizeColumns(rawColumns, defaults) {
+  const source = isObject(rawColumns) ? rawColumns : {};
+  const normalized = { ...(defaults || buildDefaultDesktopColumns()) };
+  for (const key of COLUMN_KEYS) {
+    normalized[key] = normalizeBoolean(source[key], defaults[key]);
+  }
+  return normalized;
+}
+
+function normalizeConfig(rawConfig) {
+  const source = isObject(rawConfig) ? rawConfig : {};
+  const columnsSource = isObject(source.columns) ? source.columns : source;
+
+  let desktopSource = null;
+  let mobileSource = null;
+
+  if (isObject(columnsSource.desktop) || isObject(columnsSource.mobile)) {
+    desktopSource = isObject(columnsSource.desktop) ? columnsSource.desktop : null;
+    mobileSource = isObject(columnsSource.mobile) ? columnsSource.mobile : null;
+  } else if (isObject(source.desktop) || isObject(source.mobile)) {
+    desktopSource = isObject(source.desktop) ? source.desktop : null;
+    mobileSource = isObject(source.mobile) ? source.mobile : null;
+  } else if (isObject(columnsSource)) {
+    desktopSource = columnsSource;
+    mobileSource = columnsSource;
+  }
+
+  return {
+    columns: {
+      desktop: normalizeColumns(desktopSource, buildDefaultDesktopColumns()),
+      mobile: normalizeColumns(mobileSource, buildDefaultMobileColumns()),
+    },
+  };
+}
+
+function parseRequestedColumns(input) {
+  const source = isObject(input) ? input : {};
+  const columnsSource = isObject(source.columns) ? source.columns : source;
+
+  if (isObject(columnsSource.desktop) || isObject(columnsSource.mobile)) {
+    return {
+      desktop: isObject(columnsSource.desktop) ? columnsSource.desktop : null,
+      mobile: isObject(columnsSource.mobile) ? columnsSource.mobile : null,
+    };
+  }
+
+  if (isObject(source.desktop) || isObject(source.mobile)) {
+    return {
+      desktop: isObject(source.desktop) ? source.desktop : null,
+      mobile: isObject(source.mobile) ? source.mobile : null,
+    };
+  }
+
+  if (isObject(columnsSource)) {
+    return {
+      desktop: columnsSource,
+      mobile: columnsSource,
+    };
+  }
+
+  return {
+    desktop: null,
+    mobile: null,
+  };
+}
+
+function writeJsonAtomic(filePath, data) {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+  const tempPath = path.join(dir, `.${path.basename(filePath)}.tmp-${process.pid}-${Date.now()}`);
+  fs.writeFileSync(tempPath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  fs.renameSync(tempPath, filePath);
 }
 
 function getIssuesDir(rootDir) {
@@ -344,7 +463,138 @@ function readTicketById(rootDir, ticketId) {
   };
 }
 
+function readProjectConfig(rootDir) {
+  const issuesDir = getIssuesDir(rootDir);
+  if (!fs.existsSync(issuesDir) || !fs.statSync(issuesDir).isDirectory()) {
+    return {
+      tickEnabled: false,
+      issuesDir,
+      configPath: path.join(issuesDir, CONFIG_FILE_NAME),
+      config: {
+        columns: buildDefaultColumnConfig(),
+      },
+      error: `tick is not initialized in project ${rootDir} (${ISSUES_DIR_NAME} missing).`,
+    };
+  }
+
+  const configPath = path.join(issuesDir, CONFIG_FILE_NAME);
+  if (!fs.existsSync(configPath)) {
+    return {
+      tickEnabled: true,
+      issuesDir,
+      configPath,
+      config: {
+        columns: buildDefaultColumnConfig(),
+      },
+      error: null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return {
+      tickEnabled: true,
+      issuesDir,
+      configPath,
+      config: normalizeConfig(parsed),
+      error: null,
+    };
+  } catch (err) {
+    return {
+      tickEnabled: true,
+      issuesDir,
+      configPath,
+      config: {
+        columns: buildDefaultColumnConfig(),
+      },
+      error: `Invalid JSON in ${ISSUES_DIR_NAME}/${CONFIG_FILE_NAME}: ${err.message}`,
+    };
+  }
+}
+
+function updateProjectConfig(rootDir, input) {
+  const issuesDir = getIssuesDir(rootDir);
+  if (!fs.existsSync(issuesDir) || !fs.statSync(issuesDir).isDirectory()) {
+    return {
+      ok: false,
+      code: 400,
+      tickEnabled: false,
+      issuesDir,
+      config: {
+        columns: buildDefaultColumnConfig(),
+      },
+      error: `tick is not initialized in project ${rootDir} (${ISSUES_DIR_NAME} missing).`,
+    };
+  }
+
+  const configPath = path.join(issuesDir, CONFIG_FILE_NAME);
+  let existing = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    } catch (err) {
+      existing = {};
+    }
+  }
+
+  const normalizedExisting = normalizeConfig(existing);
+  const requested = parseRequestedColumns(input);
+  const nextDesktop = requested.desktop
+    ? normalizeColumns({
+        ...normalizedExisting.columns.desktop,
+        ...requested.desktop,
+      }, buildDefaultDesktopColumns())
+    : normalizedExisting.columns.desktop;
+  const nextMobile = requested.mobile
+    ? normalizeColumns({
+        ...normalizedExisting.columns.mobile,
+        ...requested.mobile,
+      }, buildDefaultMobileColumns())
+    : normalizedExisting.columns.mobile;
+
+  const nextRaw = isObject(existing) ? { ...existing } : {};
+  nextRaw.columns = {
+    desktop: nextDesktop,
+    mobile: nextMobile,
+  };
+
+  try {
+    writeJsonAtomic(configPath, nextRaw);
+  } catch (err) {
+    return {
+      ok: false,
+      code: 500,
+      tickEnabled: true,
+      issuesDir,
+      config: {
+        columns: {
+          desktop: nextDesktop,
+          mobile: nextMobile,
+        },
+      },
+      error: `Unable to write ${ISSUES_DIR_NAME}/${CONFIG_FILE_NAME}: ${err.message}`,
+    };
+  }
+
+  return {
+    ok: true,
+    code: 200,
+    tickEnabled: true,
+    issuesDir,
+    configPath,
+    config: {
+      columns: {
+        desktop: nextDesktop,
+        mobile: nextMobile,
+      },
+    },
+    error: null,
+  };
+}
+
 module.exports = {
+  readProjectConfig,
+  updateProjectConfig,
   readTickets,
   readTicketById,
 };
