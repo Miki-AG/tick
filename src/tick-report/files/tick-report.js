@@ -42,7 +42,9 @@ function setHeaderProjectBreadcrumb(project) {
 }
 
 function normalizeStatus(value) {
-  const normalized = String(value || "").toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return FILTER_STATUSES.includes(normalized) ? normalized : "parked";
 }
 

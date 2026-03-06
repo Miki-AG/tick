@@ -119,8 +119,12 @@ function getPrefsKey(projectId: string | null): string {
   return `tick-report:prefs:project:${projectId || "default"}`;
 }
 
-function statusVariant(status: TicketStatus): "secondary" | "warning" | "success" | "muted" {
-  if (status === "blocked") return "warning";
+function statusVariant(
+  status: TicketStatus
+): "secondary" | "outline" | "warning" | "success" | "danger" | "muted" {
+  if (status === "open") return "outline";
+  if (status === "doing") return "warning";
+  if (status === "blocked") return "danger";
   if (status === "done") return "success";
   if (status === "wontfix") return "muted";
   return "secondary";
@@ -352,7 +356,7 @@ export function ProjectPage({ config }: ProjectPageProps) {
               >
                 {ticket.title || "(untitled)"}
               </a>
-              <Badge className="w-fit" variant={statusVariant(status)}>
+              <Badge className={cn("w-fit", status === "doing" ? "status-doing-pulse" : "")} variant={statusVariant(status)}>
                 {status}
               </Badge>
             </div>
@@ -581,7 +585,9 @@ export function ProjectPage({ config }: ProjectPageProps) {
                         ) : null}
                         {columnConfigByView.desktop.status ? (
                           <TableCell>
-                            <Badge variant={statusVariant(status)}>{status}</Badge>
+                            <Badge className={status === "doing" ? "status-doing-pulse" : ""} variant={statusVariant(status)}>
+                              {status}
+                            </Badge>
                           </TableCell>
                         ) : null}
                         {columnConfigByView.desktop.priority ? <TableCell>{ticket.priority || ""}</TableCell> : null}

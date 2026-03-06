@@ -10,7 +10,9 @@ export const FILTER_STATUSES: TicketStatus[] = [
 ];
 
 export function normalizeStatus(value: unknown): TicketStatus {
-  const normalized = String(value || "").toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return FILTER_STATUSES.includes(normalized as TicketStatus)
     ? (normalized as TicketStatus)
     : "parked";

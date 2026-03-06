@@ -40,3 +40,27 @@
     font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   }
 }
+
+@keyframes status-doing-pulse {
+  0%,
+  100% {
+    border-color: rgb(245 158 11 / 0.4);
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0);
+  }
+  50% {
+    border-color: rgb(251 191 36 / 0.9);
+    box-shadow: 0 0 0 2px rgb(251 191 36 / 0.28);
+  }
+}
+
+@layer utilities {
+  .status-doing-pulse {
+    animation: status-doing-pulse 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .status-doing-pulse {
+      animation: none;
+    }
+  }
+}
