@@ -17,7 +17,7 @@ tick init
 tick new "Issue title" [--priority p0|p1|p2|p3] [--owner name] [--labels a,b,c]
   Create a new ticket in ./_ISSUES from the tool template.
 
-tick list [--status open|doing|blocked|done|wontfix] [--owner name] [--label foo]
+tick list [--status open|doing|blocked|done|wontfix|parked] [--owner name] [--label foo]
   List tickets with optional filters.
 
 tick update <id> [options]

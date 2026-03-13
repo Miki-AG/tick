@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getProjectConfig, getProjectReport, saveProjectConfig } from "@/lib/api";
 import type { BootstrapConfig } from "@/lib/bootstrap";
 import { FILTER_STATUSES, formatUpdatedParts, normalizeStatus, ticketHasLabel, toTicketNumber } from "@/lib/format";
+import { dominantStatusForTone, playStatusChangeTone } from "@/lib/sound";
 import type {
   ProjectSummary,
   TicketColumnKey,
@@ -160,6 +161,8 @@ export function ProjectPage({ config }: ProjectPageProps) {
   const [isColumnPopupOpen, setIsColumnPopupOpen] = useState(false);
 
   const columnPopupRef = useRef<HTMLDivElement | null>(null);
+  const previousStatusByTicketRef = useRef<Map<string, TicketStatus>>(new Map());
+  const statusBaselineReadyRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -276,6 +279,26 @@ export function ProjectPage({ config }: ProjectPageProps) {
     const data = await getProjectReport(selectedProjectId);
     const loadedTickets = Array.isArray(data.tickets) ? data.tickets : [];
     const loadedProject = data.project || null;
+    const nextStatusByTicket = new Map<string, TicketStatus>();
+    const changedStatuses: TicketStatus[] = [];
+
+    for (const ticket of loadedTickets) {
+      const ticketId = String(ticket.fileId || ticket.id || "").trim();
+      if (!ticketId) continue;
+      const nextStatus = normalizeStatus(ticket.status);
+      nextStatusByTicket.set(ticketId, nextStatus);
+      if (!statusBaselineReadyRef.current) continue;
+      const previousStatus = previousStatusByTicketRef.current.get(ticketId);
+      if (previousStatus && previousStatus !== nextStatus) {
+        changedStatuses.push(nextStatus);
+      }
+    }
+
+    if (statusBaselineReadyRef.current && changedStatuses.length > 0) {
+      playStatusChangeTone(dominantStatusForTone(changedStatuses));
+    }
+    previousStatusByTicketRef.current = nextStatusByTicket;
+    statusBaselineReadyRef.current = true;
 
     setProject(loadedProject);
     setTickets(loadedTickets);

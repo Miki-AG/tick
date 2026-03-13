@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getTicket, saveTicket } from "@/lib/api";
 import type { BootstrapConfig } from "@/lib/bootstrap";
-import { formatLabelsForInput, normalizeTicketIdForApi, parseLabelsText } from "@/lib/format";
-import type { ProjectSummary, TicketSummary } from "@/lib/types";
+import { formatLabelsForInput, normalizeStatus, normalizeTicketIdForApi, parseLabelsText } from "@/lib/format";
+import { playStatusChangeTone } from "@/lib/sound";
+import type { ProjectSummary, TicketStatus, TicketSummary } from "@/lib/types";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,8 @@ export function TicketPage({ config }: TicketPageProps) {
   const [saving, setSaving] = useState(false);
   const [saveNote, setSaveNote] = useState("No changes");
   const [saveTone, setSaveTone] = useState<SaveTone>("neutral");
+  const statusBaselineReadyRef = useRef(false);
+  const previousStatusRef = useRef<TicketStatus | null>(null);
 
   const dirty = useMemo(() => {
     if (!loaded) return false;
@@ -139,6 +142,12 @@ export function TicketPage({ config }: TicketPageProps) {
     }
 
     if (data.ticket) {
+      const nextStatus = normalizeStatus(data.ticket.status);
+      if (statusBaselineReadyRef.current && previousStatusRef.current && previousStatusRef.current !== nextStatus) {
+        playStatusChangeTone(nextStatus);
+      }
+      previousStatusRef.current = nextStatus;
+      statusBaselineReadyRef.current = true;
       applyTicketToForm(data.ticket);
     }
 
